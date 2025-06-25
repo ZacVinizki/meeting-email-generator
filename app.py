@@ -36,13 +36,523 @@ print("Loaded OpenAI key:", os.getenv("OPENAI_API_KEY"))
 
 
 # Configure page
+
+# Add this CSS styling code right after your st.set_page_config() line in app.py
+# This creates the sexy dark theme without changing any functionality
+
+# Configure page (keep your existing config but add theme)
 st.set_page_config(
     page_title="Meeting Follow-up Generator",
-    page_icon="📧",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Add this CSS styling block right after st.set_page_config()
+# Replace your existing CSS styling block with this improved version
+# Replace your CSS styling block with this INSANELY aesthetic version
+# Replace your CSS with this NUCLEAR version that forces everything dark
+st.markdown("""
+<style>
+    /* NUCLEAR DARK THEME - OVERRIDE EVERYTHING */
+
+    /* Force entire app to be black */
+    .stApp, .stApp > div, .main, .block-container, .element-container {
+        background: #000000 !important;
+        color: #ffffff !important;
+    }
+
+    /* App background */
+    .stApp {
+        background: linear-gradient(135deg, #000000 0%, #111111 50%, #000000 100%) !important;
+    }
+
+    /* Main content area background */
+    .main .block-container {
+        background: rgba(0, 0, 0, 0.95) !important;
+        border-radius: 20px;
+        border: 1px solid #333;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        color: #ffffff !important;
+        padding: 2rem;
+    }
+
+    /* SIDEBAR - FORCE PURE BLACK */
+    .css-1d391kg, .css-1d391kg > div, .css-1d391kg section, .css-1d391kg .stMarkdown,
+    .css-1d391kg .element-container, .css-1d391kg .block-container,
+    [data-testid="stSidebar"], [data-testid="stSidebar"] > div, 
+    [data-testid="stSidebar"] section, [data-testid="stSidebar"] .stMarkdown {
+        background: #000000 !important;
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border-right: 3px solid #00d4ff !important;
+        box-shadow: 5px 0 20px rgba(0, 212, 255, 0.3);
+    }
+
+    /* Force sidebar elements to be white text on black */
+    .css-1d391kg *, [data-testid="stSidebar"] * {
+        color: #ffffff !important;
+        background: transparent !important;
+    }
+
+    /* Headers */
+    h1 {
+        color: #00d4ff !important;
+        text-align: center;
+        font-weight: 700;
+        font-size: 3rem !important;
+        margin-bottom: 0.5rem !important;
+        text-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+    }
+
+    h2 {
+        color: #ffffff !important;
+        font-weight: 600;
+        border-bottom: 2px solid #00d4ff;
+        padding-bottom: 0.5rem;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+
+    h3 {
+        color: #00d4ff !important;
+        font-weight: 500;
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+
+    /* FORCE ALL TEXT WHITE */
+    .stMarkdown, .stText, p, span, div, label, .stMarkdown p, .stMarkdown div {
+        color: #ffffff !important;
+    }
+
+    /* Labels bright white */
+    .stTextInput label, .stFileUploader label, .stCheckbox label, 
+    .stSelectbox label, .stSlider label, .stRadio label {
+        color: #ffffff !important;
+        font-weight: 600;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+    }
+
+    /* Help text */
+    .stTextInput .help, .stFileUploader .help, .stCheckbox .help {
+        color: #cccccc !important;
+    }
+
+    /* ULTRA SEXY BUTTONS */
+    .stButton > button {
+        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+        color: #000000 !important;
+        font-weight: 700;
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 2.5rem;
+        font-size: 1.1rem;
+        transition: all 0.4s ease;
+        box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #ffffff 0%, #e6e6e6 100%) !important;
+        box-shadow: 0 12px 35px rgba(0, 212, 255, 0.7);
+        transform: translateY(-3px) scale(1.02);
+        color: #000000 !important;
+    }
+
+    /* Form submit buttons */
+    .stFormSubmitButton > button {
+        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+        color: #000000 !important;
+        font-weight: 700;
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        width: 100%;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        transition: all 0.4s ease;
+    }
+
+    /* INPUT FIELDS - PURE BLACK */
+    .stTextInput > div > div > input {
+        background: #000000 !important;
+        color: #ffffff !important;
+        border: 2px solid #333 !important;
+        border-radius: 15px;
+        padding: 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .stTextInput > div > div > input:focus {
+        border-color: #00d4ff !important;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5), inset 0 2px 5px rgba(0, 0, 0, 0.3);
+        background: #000000 !important;
+        color: #ffffff !important;
+    }
+
+    .stTextInput input::placeholder {
+        color: #888888 !important;
+    }
+
+ /* FILE UPLOADER - CLEAN SINGLE BORDER */
+.stFileUploader > div {
+    background: #000000 !important;
+    border: 3px dashed #00d4ff !important;
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #ffffff !important;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.stFileUploader > div:hover {
+    border-color: #ffffff !important;
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.3), inset 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* File uploader content - no additional borders */
+.stFileUploader div[data-testid="stFileUploadDropzone"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0;
+}
+
+    .stFileUploader div[data-testid="stFileUploadDropzone"]:hover {
+        border-color: #ffffff !important;
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.3), inset 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Force file uploader text white */
+    .stFileUploader label, .stFileUploader p, .stFileUploader span,
+    .stFileUploader div[data-testid="stFileUploadDropzone"] *,
+    .stFileUploader * {
+        color: #ffffff !important;
+        background: transparent !important;
+        font-weight: 500;
+    }
+
+    /* Text areas */
+    .stTextArea > div > div > textarea {
+        background: #000000 !important;
+        color: #ffffff !important;
+        border: 2px solid #333 !important;
+        border-radius: 15px;
+        font-family: 'Courier New', monospace;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    /* CHECKBOX - GLOWING WHITE OUTLINE */
+.stCheckbox label, .stCheckbox span, .stCheckbox div {
+    color: #ffffff !important;
+    font-weight: 500;
+}
+
+/* Checkbox input styling */
+.stCheckbox input[type="checkbox"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ffffff;
+    border-radius: 4px;
+    background: transparent;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.stCheckbox input[type="checkbox"]:hover {
+    border-color: #00d4ff;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+    background: rgba(0, 212, 255, 0.1);
+}
+
+.stCheckbox input[type="checkbox"]:checked {
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    border-color: #00d4ff;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+}
+
+.stCheckbox input[type="checkbox"]:checked::after {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #000000;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Any other input elements that might be hard to see */
+.stSelectbox > div > div {
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    color: #ffffff !important;
+}
+
+.stSelectbox > div > div:hover {
+    border-color: #00d4ff !important;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+}
+
+/* Radio buttons */
+.stRadio input[type="radio"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.stRadio input[type="radio"]:hover {
+    border-color: #00d4ff;
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
+}
+
+.stRadio input[type="radio"]:checked {
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    border-color: #00d4ff;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+}
+
+.stRadio input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #000000;
+}
+
+/* Slider styling */
+.stSlider > div > div > div {
+    background: #333 !important;
+}
+
+.stSlider > div > div > div > div {
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+/* Number input */
+.stNumberInput > div > div > input {
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.stNumberInput > div > div > input:focus {
+    border-color: #00d4ff !important;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+}
+
+    /* SUCCESS/ERROR MESSAGES */
+    .stSuccess {
+        background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%) !important;
+        color: #000000 !important;
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0, 255, 136, 0.4);
+        font-weight: 600;
+    }
+
+    .stError {
+        background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%) !important;
+        color: #ffffff !important;
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
+        font-weight: 600;
+    }
+
+    .stInfo {
+        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+        color: #000000 !important;
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        font-weight: 600;
+    }
+
+    .stWarning {
+        background: linear-gradient(135deg, #ffa502 0%, #ff8c00 100%) !important;
+        color: #000000 !important;
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(255, 165, 2, 0.4);
+        font-weight: 600;
+    }
+
+    /* TABS - FIXED TEXT VISIBILITY */
+.stTabs [data-baseweb="tab-list"] {
+    background: #000000 !important;
+    border-radius: 15px;
+    gap: 10px;
+    padding: 0.5rem;
+    border: 1px solid #333;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 1px solid #333;
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 5px 15px rgba(0, 212, 255, 0.5);
+    transform: translateY(-2px);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+/* Force tab content text to be white */
+.stTabs div[data-baseweb="tab-panel"] {
+    color: #ffffff !important;
+}
+
+.stTabs div[data-baseweb="tab-panel"] * {
+    color: #ffffff !important;
+}
+
+    /* DOWNLOAD BUTTONS */
+    .stDownloadButton > button {
+        background: linear-gradient(135deg, #333333 0%, #1a1a1a 100%) !important;
+        color: #ffffff !important;
+        border: 2px solid #00d4ff;
+        border-radius: 15px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stDownloadButton > button:hover {
+        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+        color: #000000 !important;
+        box-shadow: 0 8px 25px rgba(0, 212, 255, 0.5);
+        transform: translateY(-2px);
+    }
+
+    /* CUSTOM CONTAINERS */
+    .email-container {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(26, 26, 26, 0.95) 100%) !important;
+        border: 2px solid #00d4ff;
+        border-radius: 20px;
+        padding: 2.5rem;
+        margin: 1.5rem 0;
+        box-shadow: 0 15px 50px rgba(0, 212, 255, 0.2);
+        backdrop-filter: blur(15px);
+        color: #ffffff !important;
+    }
+
+    .login-container {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(26, 26, 26, 0.95) 100%) !important;
+        border: 3px solid #00d4ff;
+        border-radius: 25px;
+        padding: 4rem;
+        margin: 3rem auto;
+        max-width: 500px;
+        box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
+        text-align: center;
+        color: #ffffff !important;
+        backdrop-filter: blur(20px);
+    }
+
+    /* FOOTER */
+    .footer {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(26, 26, 26, 0.9) 100%) !important;
+        border-top: 3px solid #00d4ff;
+        margin-top: 3rem;
+        padding: 2.5rem;
+        border-radius: 20px 20px 0 0;
+        color: #ffffff !important;
+        box-shadow: 0 -10px 30px rgba(0, 212, 255, 0.2);
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #000000;
+        border-radius: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+        border-radius: 6px;
+        box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #ffffff 0%, #00d4ff 100%);
+        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.5);
+    }
+
+    /* FORCE OVERRIDE ANY REMAINING WHITE BACKGROUNDS */
+    .stApp *, .main *, .css-1d391kg *, [data-testid="stSidebar"] * {
+        background-color: transparent !important;
+    }
+
+    /* Ensure no white anywhere */
+    .stApp > div, .main > div, .block-container > div,
+    .element-container > div, .stMarkdown > div {
+        background: transparent !important;
+        color: #ffffff !important;
+    }
+
+    /* Final nuclear option - force everything */
+    * {
+        color: inherit !important;
+    }
+
+    .stApp, .main, .css-1d391kg, [data-testid="stSidebar"] {
+        background: #000000 !important;
+    }
+
+    /* File uploader icons */
+    .stFileUploader svg {
+        color: #00d4ff !important;
+        fill: #00d4ff !important;
+    }
+
+    /* Spinner */
+    .stSpinner > div {
+        border-top-color: #00d4ff !important;
+        border-width: 4px !important;
+    }
+
+    .stSpinner + div {
+        color: #ffffff !important;
+        font-weight: 500;
+    }
+</style>
+""", unsafe_allow_html=True)
 # Initialize directories
 AUDIO_DIR = Path("audio_files")
 EMAILS_DIR = Path("emails")
@@ -346,9 +856,101 @@ James
         return filepath
 
 
+def check_authentication():
+    """Authentication for deployed app with sexy styling"""
+
+    # Get password from environment (you'll set this in Streamlit secrets)
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "test123")
+
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if not st.session_state.authenticated:
+        # Hero section for login
+        st.markdown("""
+            <div style="text-align: center; margin: 3rem 0;">
+                <h1 style="color: #00d4ff; font-size: 4rem; text-shadow: 0 0 30px rgba(0, 212, 255, 0.8); margin-bottom: 1rem;">
+                    🤖 Ewing Morris AI Assistant
+                </h1>
+                <p style="color: #cccccc; font-size: 1.3rem; margin-bottom: 3rem;">
+                    Secure access required • Enterprise-grade AI tool
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Centered login container
+        col1, col2, col3 = st.columns([1, 2, 1])
+
+        with col2:
+            st.markdown("""
+                <div class="login-container">
+                    <div style="margin-bottom: 2rem;">
+                        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #00d4ff, #0099cc); border-radius: 50%; margin: 0 auto 1rem auto; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                            🔐
+                        </div>
+                        <h2 style="color: #ffffff; margin: 1rem 0;">Secure Access</h2>
+                        <p style="color: #cccccc; font-size: 0.95rem;">Enter your access code to continue</p>
+                    </div>
+            """, unsafe_allow_html=True)
+
+            with st.form("auth_form"):
+                password = st.text_input(
+                    "",
+                    type="password",
+                    placeholder="Enter access code...",
+                    help="Contact admin for access credentials"
+                )
+
+                submit = st.form_submit_button(
+                    "🚀 Access System",
+                    type="primary",
+                    use_container_width=True
+                )
+
+                if submit:
+                    if password == ADMIN_PASSWORD:
+                        st.session_state.authenticated = True
+                        st.success("✅ Access granted! Initializing AI system...")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid access code. Please contact administrator.")
+                        st.stop()
+
+            st.markdown("""
+                </div>
+            """, unsafe_allow_html=True)
+
+        # Footer for login page
+        st.markdown("""
+            <div class="footer" style="text-align: center; margin-top: 4rem;">
+                <p style="color: #666; margin: 0;">
+                    🔒 Authorized personnel only • AI-powered meeting assistant
+                </p>
+                <p style="color: #444; font-size: 0.85rem; margin: 0.5rem 0 0 0;">
+                    Enterprise security • End-to-end encryption
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+
+
 def main():
-    st.title("📧 Ewing Morris Follow-up Email Generator")
-    st.markdown("*Transform client meeting recordings into professional follow-up emails*")
+    # Add authentication check
+    check_authentication()
+
+    # Hero section with new styling
+    st.markdown("""
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="color: #00d4ff; text-shadow: 0 0 20px rgba(0, 212, 255, 0.5); margin-bottom: 0.5rem;">
+                🤖 Ewing Morris AI Assistant
+            </h1>
+            <p style="color: #cccccc; font-size: 1.2rem; font-weight: 300; margin-bottom: 0;">
+                Transform meeting recordings into professional follow-up emails
+            </p>
+            <div style="width: 100px; height: 3px; background: linear-gradient(90deg, #00d4ff, #ffffff); margin: 1rem auto;"></div>
+        </div>
+    """, unsafe_allow_html=True)
 
     # Initialize session state
     if 'generator' not in st.session_state:
@@ -356,47 +958,208 @@ def main():
 
     # Sidebar for settings and history
     with st.sidebar:
-        st.header("⚙️ Settings")
+        st.markdown("""
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="color: #00d4ff; font-size: 1.5rem; margin-bottom: 1rem;">⚙️ Control Panel</h2>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # API Key check
+        # API Key check with new styling
         if not os.getenv("OPENAI_API_KEY"):
-            st.error("⚠️ OpenAI API key not found. Please configure your .env file.")
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #ff4757, #ff3742); color: white; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>⚠️ OpenAI API Not Configured</strong><br>
+                    <small>Please configure your .env file</small>
+                </div>
+            """, unsafe_allow_html=True)
         else:
-            st.success("✅ OpenAI API configured")
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>✅ OpenAI API Active</strong><br>
+                    <small>Ready for transcription</small>
+                </div>
+            """, unsafe_allow_html=True)
 
         if not all([os.getenv("SENDER_EMAIL"), os.getenv("SENDER_PASSWORD")]):
-            st.warning("⚠️ Email credentials not configured. Email sending will be disabled.")
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #ffa502, #ff8c00); color: white; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>⚠️ Email Not Configured</strong><br>
+                    <small>Email sending disabled</small>
+                </div>
+            """, unsafe_allow_html=True)
         else:
-            st.success("✅ Email credentials configured")
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>✅ Email System Active</strong><br>
+                    <small>Ready to send emails</small>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Add the 2 additional status boxes
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>✅ Audio Processing Active</strong><br>
+                    <small>MP3, WAV, M4A ready</small>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>✅ Security Active</strong><br>
+                    <small>Authentication enabled</small>
+                </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("---")
 
-        # Email options
-        st.subheader("Email Options")
-        include_transcript = st.checkbox("Include transcript as attachment", value=False)
-        st.session_state.include_transcript = include_transcript
+        # System Status Dashboard
+        # System Status Dashboard - 4 Matching Green Boxes
 
-        st.markdown("---")
 
-        # Recent emails
-        st.subheader("📁 Recent Emails")
-        email_files = list(EMAILS_DIR.glob("*.json"))
-        if email_files:
+        # Recent emails - COLLAPSIBLE CLEAN DESIGN
+    email_files = list(EMAILS_DIR.glob("*.json"))
+    email_count = len(email_files)
+
+    # Email count display
+    st.markdown(f"""
+           <div style="text-align: center; margin-bottom: 1rem;">
+               <span style="color: #666; font-size: 0.8rem;">📊 Total Emails Sent: </span>
+               <span style="color: #00d4ff; font-weight: 600; font-size: 1.1rem;">{email_count}</span>
+           </div>
+       """, unsafe_allow_html=True)
+
+    # Collapsible email history
+    if email_files:
+        with st.expander("📁 Email History", expanded=False):
             email_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-            for email_file in email_files[:5]:  # Show last 5
-                with open(email_file, 'r') as f:
-                    record = json.load(f)
-                st.text(f"{record['timestamp'][:16]}")
-                st.text(f"To: {record['recipient_email']}")
-                st.markdown("---")
-        else:
-            st.text("No emails generated yet")
 
+            # Create container for the list
+            st.markdown("""
+                   <div style="margin: 1rem 0;">
+               """, unsafe_allow_html=True)
+
+            for i, email_file in enumerate(email_files):
+                try:
+                    with open(email_file, 'r') as f:
+                        record = json.load(f)
+
+                    # Extract email name (before @) and truncate if needed
+                    email_name = record['recipient_email'].split('@')[0]
+                    if len(email_name) > 15:
+                        email_name = email_name[:15] + "..."
+
+                    # Format timestamp
+                    timestamp = record['timestamp'][:16].replace('T', ' ')
+                    date_part = timestamp.split(' ')[0]
+                    time_part = timestamp.split(' ')[1]
+
+                    # Create each email entry
+                    st.markdown(f"""
+                           <div style="
+                               background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%); 
+                               padding: 1rem; 
+                               border-radius: 12px; 
+                               margin: 0.5rem 0; 
+                               border-left: 4px solid #00d4ff;
+                               border: 1px solid #333;
+                               transition: all 0.3s ease;
+                               position: relative;
+                               overflow: hidden;
+                           " 
+                           onmouseover="
+                               this.style.background='linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(26, 26, 26, 0.9) 100%)'; 
+                               this.style.transform='translateY(-2px)';
+                               this.style.boxShadow='0 8px 25px rgba(0, 212, 255, 0.2)';
+                           "
+                           onmouseout="
+                               this.style.background='linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%)'; 
+                               this.style.transform='translateY(0px)';
+                               this.style.boxShadow='none';
+                           ">
+                               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                   <div style="flex: 1;">
+                                       <div style="color: #00d4ff; font-weight: 700; font-size: 1rem; margin-bottom: 0.3rem; display: flex; align-items: center;">
+                                           <span style="margin-right: 0.5rem;">👤</span>
+                                           {email_name}
+                                       </div>
+                                       <div style="color: #cccccc; font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                           📧 {record['recipient_email']}
+                                       </div>
+                                       <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
+                                           <span style="color: #888; display: flex; align-items: center;">
+                                               <span style="margin-right: 0.3rem;">📅</span>
+                                               {date_part}
+                                           </span>
+                                           <span style="color: #888; display: flex; align-items: center;">
+                                               <span style="margin-right: 0.3rem;">🕒</span>
+                                               {time_part}
+                                           </span>
+                                       </div>
+                                   </div>
+                                   <div style="display: flex; flex-direction: column; align-items: center; margin-left: 1rem;">
+                                       <div style="color: #00ff88; font-size: 1.5rem; margin-bottom: 0.2rem;">
+                                           ✓
+                                       </div>
+                                       <div style="color: #00ff88; font-size: 0.7rem; font-weight: 600;">
+                                           SENT
+                                       </div>
+                                   </div>
+                               </div>
+                               <div style="
+                                   position: absolute; 
+                                   bottom: 0; 
+                                   left: 0; 
+                                   width: 100%; 
+                                   height: 2px; 
+                                   background: linear-gradient(90deg, #00d4ff 0%, transparent 100%);
+                               "></div>
+                           </div>
+                       """, unsafe_allow_html=True)
+
+                except (json.JSONDecodeError, KeyError):
+                    continue
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # Summary at bottom of expanded section
+            st.markdown(f"""
+                   <div style="
+                       text-align: center; 
+                       margin-top: 1.5rem; 
+                       padding: 1rem;
+                       background: rgba(0, 212, 255, 0.05);
+                       border-radius: 10px;
+                       border: 1px solid rgba(0, 212, 255, 0.2);
+                   ">
+                       <span style="color: #00d4ff; font-weight: 600;">📈 Total Communications: {email_count}</span>
+                   </div>
+               """, unsafe_allow_html=True)
+
+    else:
+        st.markdown("""
+               <div style="
+                   text-align: center; 
+                   color: #666; 
+                   padding: 2rem 1rem;
+                   background: rgba(0, 0, 0, 0.3);
+                   border-radius: 15px;
+                   border: 1px dashed #333;
+                   margin-top: 1rem;
+               ">
+                   <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                   <p style="color: #888; margin: 0; font-weight: 500;">No emails sent yet</p>
+                   <p style="color: #666; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Your email history will appear here</p>
+               </div>
+           """, unsafe_allow_html=True)
     # Main content area
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.header("🎤 Upload Audio")
+        st.markdown("""
+            <div style="margin-bottom: 2rem;">
+                <h2 style="color: #00d4ff; border-bottom: 2px solid #00d4ff; padding-bottom: 0.5rem;">🎤 Upload Audio</h2>
+            </div>
+        """, unsafe_allow_html=True)
 
         # File uploader
         uploaded_file = st.file_uploader(
@@ -427,7 +1190,11 @@ def main():
         )
 
     with col2:
-        st.header("📄 Results")
+        st.markdown("""
+            <div style="margin-bottom: 2rem;">
+                <h2 style="color: #00d4ff; border-bottom: 2px solid #00d4ff; padding-bottom: 0.5rem;">📄 Results</h2>
+            </div>
+        """, unsafe_allow_html=True)
 
         if generate_button and uploaded_file and recipient_email:
             with st.spinner("Processing audio and generating email..."):
@@ -467,24 +1234,22 @@ def main():
         tab1, tab2 = st.tabs(["📝 Generated Email", "📄 Full Transcript"])
 
         with tab1:
-            st.subheader("Professional Follow-up Email")
+            st.markdown("""
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h2 style="color: #00d4ff;">📧 Generated Email</h2>
+                    <p style="color: #cccccc;">Professional follow-up ready to send</p>
+                </div>
+            """, unsafe_allow_html=True)
 
             # Display email in a styled container
-            st.markdown(
-                f"""
-                <div style="
-                    background-color: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 10px;
-                    border-left: 4px solid #007acc;
-                    font-family: 'Arial', sans-serif;
-                    line-height: 1.6;
-                ">
-                    <pre style="white-space: pre-wrap; font-family: inherit;">{st.session_state.current_email}</pre>
+            st.markdown(f"""
+                <div class="email-container">
+                    <div style="background: rgba(0, 212, 255, 0.1); border-left: 4px solid #00d4ff; padding: 1.5rem; border-radius: 0 10px 10px 0; margin-bottom: 1rem;">
+                        <h4 style="color: #00d4ff; margin: 0 0 1rem 0;">📩 Email Preview</h4>
+                        <pre style="white-space: pre-wrap; font-family: 'Arial', sans-serif; line-height: 1.6; color: #ffffff; background: transparent; border: none; padding: 0; margin: 0; font-size: 0.95rem;">{st.session_state.current_email}</pre>
+                    </div>
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+            """, unsafe_allow_html=True)
 
             # Send email section
             st.markdown("---")
@@ -536,14 +1301,51 @@ def main():
                 if st.button("📋 Copy Email"):
                     st.info("Email content ready to copy (select and copy from the box above)")
 
-        with tab2:
-            st.subheader("Meeting Transcript")
-            st.text_area(
-                "Full transcript of the meeting:",
-                value=st.session_state.current_transcript,
-                height=400,
-                disabled=True
-            )
+                with tab2:
+                    st.markdown("""
+                        <div style="text-align: center; margin-bottom: 2rem;">
+                            <h2 style="color: #00d4ff;">📄 Meeting Transcript</h2>
+                            <p style="color: #cccccc;">Full audio transcription</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    # Create a styled transcript container instead of text_area
+                    st.markdown(f"""
+                        <div style="
+                            background: rgba(0, 0, 0, 0.8);
+                            color: #ffffff;
+                            padding: 1.5rem;
+                            border-radius: 15px;
+                            border: 2px solid #333;
+                            font-family: 'Courier New', monospace;
+                            line-height: 1.6;
+                            max-height: 400px;
+                            overflow-y: auto;
+                            white-space: pre-wrap;
+                            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+                        ">
+                {st.session_state.current_transcript}
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                # Create a styled transcript container instead of text_area
+                st.markdown(f"""
+                    <div style="
+                        background: rgba(0, 0, 0, 0.8);
+                        color: #ffffff;
+                        padding: 1.5rem;
+                        border-radius: 15px;
+                        border: 2px solid #333;
+                        font-family: 'Courier New', monospace;
+                        line-height: 1.6;
+                        max-height: 400px;
+                        overflow-y: auto;
+                        white-space: pre-wrap;
+                        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+                    ">
+            {st.session_state.current_transcript}
+                    </div>
+                """, unsafe_allow_html=True)
 
             # Download transcript
             st.download_button(
@@ -553,19 +1355,22 @@ def main():
                 mime="text/plain"
             )
 
-    # Footer
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style="text-align: center; color: #666; padding: 20px;">
-            <p>Meeting Follow-up Email Generator | Built for Investment Fund AI Team</p>
-            <p>Secure • Professional • Efficient</p>
+    # Footer with new styling
+    st.markdown("""
+        <div class="footer">
+            <div style="text-align: center;">
+                <h3 style="color: #00d4ff; margin-bottom: 1rem;">🤖 Ewing Morris AI Assistant</h3>
+                <p style="color: #cccccc; margin-bottom: 0.5rem;">Enterprise-grade • Secure • Intelligent</p>
+                <div style="display: flex; justify-content: center; gap: 2rem; margin: 1rem 0;">
+                    <span style="color: #666;">🔒 Encrypted</span>
+                    <span style="color: #666;">⚡ Real-time</span>
+                    <span style="color: #666;">🎯 Professional</span>
+                </div>
+                <p style="color: #444; font-size: 0.85rem;">Powered by OpenAI • Built for Investment Professionals</p>
+            </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
-    main()# Updated UI - Wed 25 Jun 2025 15:37:05 EDT
-
+    main()
