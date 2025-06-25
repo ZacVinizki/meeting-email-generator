@@ -551,6 +551,77 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 500;
     }
+    /* FIX TOP RIGHT MENU DROPDOWN */
+.stApp > header {
+    background: transparent !important;
+}
+
+/* Main menu button */
+[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+[data-testid="stHeader"] button {
+    color: #ffffff !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 1px solid #00d4ff !important;
+    border-radius: 8px;
+}
+
+[data-testid="stHeader"] button:hover {
+    background: rgba(0, 212, 255, 0.2) !important;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* Dropdown menu background */
+[data-baseweb="popover"] {
+    background: #000000 !important;
+    border: 2px solid #00d4ff !important;
+    border-radius: 15px !important;
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3) !important;
+}
+
+[data-baseweb="popover"] > div {
+    background: #000000 !important;
+    color: #ffffff !important;
+}
+
+/* Menu items */
+[data-baseweb="popover"] button, 
+[data-baseweb="popover"] a,
+[data-baseweb="popover"] div {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    margin: 0.2rem 0 !important;
+    padding: 0.5rem 1rem !important;
+    transition: all 0.3s ease !important;
+}
+
+[data-baseweb="popover"] button:hover,
+[data-baseweb="popover"] a:hover {
+    background: rgba(0, 212, 255, 0.2) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3) !important;
+}
+
+/* Settings text and icons */
+[data-baseweb="popover"] span,
+[data-baseweb="popover"] svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}
+
+/* Force menu text visibility */
+[data-testid="stMainMenu"] {
+    background: #000000 !important;
+    color: #ffffff !important;
+}
+
+[data-testid="stMainMenu"] * {
+    color: #ffffff !important;
+    background: transparent !important;
+}
 </style>
 """, unsafe_allow_html=True)
 # Initialize directories
@@ -1373,4 +1444,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()# Menu fix
+    main()
