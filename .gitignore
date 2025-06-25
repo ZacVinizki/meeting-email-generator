@@ -1,0 +1,22 @@
+# Environment variables (NEVER upload API keys!)
+.env
+.env.local
+.env.production
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Audio and email files (created at runtime)
+audio_files/
+emails/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
