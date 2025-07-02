@@ -33,14 +33,50 @@ import time
 load_dotenv()
 print("Loaded OpenAI key:", os.getenv("OPENAI_API_KEY"))
 
+# PASSWORD PROTECTION
+def check_password():
+    """Returns True if the user entered the correct password."""
+    
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        entered_password = st.session_state["password"].strip()
+        
+        # Allow different capitalizations of "Morris Ewing"
+        correct_passwords = [
+            "morris ewing",
+            "Morris Ewing", 
+            "Morris ewing",
+            "morris Ewing",
+            "MORRIS EWING"
+        ]
+        
+        if entered_password in correct_passwords:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store the password
+        else:
+            st.session_state["password_correct"] = False
 
+    # Return True if password already verified
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # Show login form
+    st.markdown("### 🔒 Enter Passcode to Access Tool")
+    st.text_input(
+        "Passcode", 
+        type="password", 
+        on_change=password_entered, 
+        key="password",
+        placeholder="Enter passcode..."
+    )
+    
+    if "password_correct" in st.session_state:
+        if not st.session_state["password_correct"]:
+            st.error("😞 Incorrect passcode. Please try again.")
+    
+    return False
 
 # Configure page
-
-# Add this CSS styling code right after your st.set_page_config() line in app.py
-# This creates the sexy dark theme without changing any functionality
-
-# Configure page (keep your existing config but add theme)
 st.set_page_config(
     page_title="Meeting Follow-up Generator",
     page_icon="🤖",
@@ -48,10 +84,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Add this CSS styling block right after st.set_page_config()
-# Replace your existing CSS styling block with this improved version
-# Replace your CSS styling block with this INSANELY aesthetic version
-# Replace your CSS with this NUCLEAR version that forces everything dark
+# CSS styling
 st.markdown("""
 <style>
     /* NUCLEAR DARK THEME - OVERRIDE EVERYTHING */
@@ -77,7 +110,6 @@ st.markdown("""
         color: #ffffff !important;
         padding: 2rem;
     }
-
     /* SIDEBAR - FORCE PURE BLACK */
     .css-1d391kg, .css-1d391kg > div, .css-1d391kg section, .css-1d391kg .stMarkdown,
     .css-1d391kg .element-container, .css-1d391kg .block-container,
@@ -928,6 +960,8 @@ James
 
 
 def main():
+    if not check_password():
+        st.stop()
 
     # Hero section with new styling
     st.markdown("""
