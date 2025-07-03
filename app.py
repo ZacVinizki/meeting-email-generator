@@ -659,8 +659,13 @@ st.markdown("""
 # Initialize directories
 AUDIO_DIR = Path("audio_files")
 EMAILS_DIR = Path("emails")
+TASKS_DIR = Path("tasks")
 AUDIO_DIR.mkdir(exist_ok=True)
 EMAILS_DIR.mkdir(exist_ok=True)
+TASKS_DIR.mkdir(exist_ok=True)
+
+# Tasks file path
+TASKS_FILE = TASKS_DIR / "james_tasks.json"
 
 # Configure OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -957,7 +962,52 @@ James
             json.dump(record, f, indent=2)
 
         return filepath
+def save_task(client_name, task_text):
+    """Save task to persistent file"""
+    # Load existing tasks
+    if TASKS_FILE.exists():
+        with open(TASKS_FILE, 'r') as f:
+            tasks = json.load(f)
+    else:
+        tasks = []
+    
+    # Add new task
+    new_task = {
+        "id": str(uuid.uuid4()),
+        "client_name": client_name,
+        "task": task_text,
+        "date_added": datetime.datetime.now().isoformat(),
+        "completed": False
+    }
+    
+    tasks.append(new_task)
+    
+    # Save back to file
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(tasks, f, indent=2)
+    
+    return len(tasks)
 
+def get_all_tasks():
+    """Get all tasks from file"""
+    if TASKS_FILE.exists():
+        with open(TASKS_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def mark_task_complete(task_id):
+    """Mark task as completed"""
+    if TASKS_FILE.exists():
+        with open(TASKS_FILE, 'r') as f:
+            tasks = json.load(f)
+        
+        for task in tasks:
+            if task['id'] == task_id:
+                task['completed'] = True
+                break
+        
+        with open(TASKS_FILE, 'w') as f:
+            json.dump(tasks, f, indent=2)
 
 def main():
     if not check_password():
@@ -1036,8 +1086,41 @@ def main():
 
         st.markdown("---")
 
-        # System Status Dashboard
-        # System Status Dashboard - 4 Matching Green Boxes
+        # Task Manager Section
+        st.markdown("""
+            <h3 style="color: #00d4ff; margin-bottom: 1rem; text-align: center;">📋 Task Manager</h3>
+        """, unsafe_allow_html=True)
+
+        if st.button("📋 View Tasks File", use_container_width=True):
+            st.session_state.show_tasks = not st.session_state.get('show_tasks', False)
+
+        # Show tasks if button clicked
+        if st.session_state.get('show_tasks', False):
+            all_tasks = get_all_tasks()
+            pending_tasks = [t for t in all_tasks if not t['completed']]
+            
+            st.markdown(f"""
+                <div style="text-align: center; margin: 1rem 0; padding: 1rem; background: rgba(0, 212, 255, 0.1); border-radius: 10px;">
+                    <span style="color: #ff4757; font-weight: 600;">{len(pending_tasks)} Pending Tasks</span>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Show pending tasks
+            for task in pending_tasks[-5:]:  # Show last 5
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.markdown(f"""
+                        <div style="background: rgba(255, 71, 87, 0.1); padding: 0.75rem; border-radius: 8px; margin: 0.25rem 0; border-left: 3px solid #ff4757;">
+                            <strong style="color: #00d4ff;">{task['client_name']}</strong><br>
+                            <span style="color: #ffffff; font-size: 0.9rem;">{task['task']}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    if st.button("✅", key=f"complete_{task['id']}"):
+                        mark_task_complete(task['id'])
+                        st.rerun()
+
+        st.markdown("---")
 
 
         # Recent emails - COLLAPSIBLE CLEAN DESIGN
@@ -1311,6 +1394,36 @@ def main():
                             st.info("🗑️ Audio file cleaned up")
 
             with col2:
+                # Extract and save tasks
+                if st.button("📋 Extract Tasks", type="secondary"):
+                    client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
+                    
+                    # Extract tasks from email
+                    lines = st.session_state.current_email.split('\n')
+                    tasks_added = 0
+                    in_tasks_section = False
+                    
+                    for line in lines:
+                        line_lower = line.lower().strip()
+                        if any(keyword in line_lower for keyword in ['next steps', 'action items', 'other/next steps']):
+                            in_tasks_section = True
+                            continue
+                        if line_lower.startswith(('all the best', 'warm regards')):
+                            break
+                        if in_tasks_section and line.strip():
+                            cleaned_line = line.strip()
+                            if ('JT to' in cleaned_line) or ('James to' in cleaned_line):
+                                task = cleaned_line.replace('* ', '').replace('- ', '').strip()
+                                if task and len(task) > 5:
+                                    save_task(client_name, task)
+                                    tasks_added += 1
+                    
+                    if tasks_added > 0:
+                        st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
+                    else:
+                        st.warning("⚠️ No tasks found")
+
+            with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
                 st.download_button(
@@ -1325,7 +1438,7 @@ def main():
                 if st.button("📋 Copy Email"):
                     st.info("Email content ready to copy (select and copy from the box above)")
 
-                with tab2:
+            with tab2:
                     st.markdown("""
                         <div style="text-align: center; margin-bottom: 2rem;">
                             <h2 style="color: #00d4ff;">📄 Meeting Transcript</h2>
