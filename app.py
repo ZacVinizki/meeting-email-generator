@@ -1365,7 +1365,6 @@ def main():
             with col1:
                 if st.button("📧 Send Email", type="primary"):
                     subject = "Follow-Up from Our Recent Meeting"
-
                     with st.spinner("Sending email..."):
                         success = st.session_state.generator.send_email(
                             st.session_state.current_recipient,
@@ -1373,10 +1372,8 @@ def main():
                             st.session_state.current_email,
                             st.session_state.current_transcript
                         )
-
                     if success:
                         st.success(f"✅ Email sent successfully to {st.session_state.current_recipient}!")
-
                         # Save record
                         record_path = st.session_state.generator.save_email_record(
                             st.session_state.current_recipient,
@@ -1385,9 +1382,7 @@ def main():
                             st.session_state.current_transcript,
                             st.session_state.current_audio_filename
                         )
-
                         st.info(f"📁 Email record saved: {record_path.name}")
-
                         # Clean up audio file
                         if st.session_state.current_audio_path.exists():
                             os.remove(st.session_state.current_audio_path)
@@ -1399,49 +1394,47 @@ def main():
                     client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                     
                     # Extract tasks from email
-email_text = st.session_state.current_email
-tasks_added = 0
-st.write("DEBUG - Looking for tasks in email...")  # Shows debug message
-
-lines = email_text.split('\n')  # Split email into individual lines
-for i, line in enumerate(lines):
-    line_clean = line.strip()  # Remove extra spaces
-    
-    # Look for lines containing these phrases:
-    if (('JT to' in line_clean) or ('James to' in line_clean) or 
-        ('JT will' in line_clean) or ('James will' in line_clean) or
-        line_clean.startswith('JT ') or line_clean.startswith('James ') or
-        ('* JT' in line_clean) or ('- JT' in line_clean)):
-        
-        # Clean up bullet points/dashes
-        task = line_clean.replace('* ', '').replace('- ', '').replace('• ', '').strip()
-        
-        if task and len(task) > 10:  # Only save if task is substantial
-            save_task(client_name, task)  # Save to tasks file
-            tasks_added += 1
-            st.write(f"FOUND TASK: {task}")  # Debug output
-
-# Also look for numbered action items
-import re
-action_patterns = [
-    r'^\d+\.\s*(.+)',          # Captures: "1. JT confirmed your TFSA..."
-    r'^\*\s*(.+)',             # Captures: "* Any task"
-    r'^-\s*(.+)',              # Captures: "- Any task"
-]
-
-for pattern in action_patterns:
-    matches = re.findall(pattern, email_text, re.MULTILINE | re.IGNORECASE)
-    for match in matches:
-        task_text = match.strip()
-        if len(task_text) > 10 and ('JT' in task_text or 'James' in task_text):
-            save_task(client_name, task_text)
-            tasks_added += 1
-            st.write(f"PATTERN FOUND: {task_text}")
-
-if tasks_added > 0:
-    st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
-else:
-    st.warning("⚠️ No tasks found")
+                    email_text = st.session_state.current_email
+                    tasks_added = 0
+                    
+                    # Look for common action patterns anywhere in the email
+                    lines = email_text.split('\n')
+                    for i, line in enumerate(lines):
+                        line_clean = line.strip()
+                        
+                        # Look for JT/James action items anywhere
+                        if (('JT to' in line_clean) or ('James to' in line_clean) or 
+                            ('JT will' in line_clean) or ('James will' in line_clean) or
+                            line_clean.startswith('JT ') or line_clean.startswith('James ') or
+                            ('* JT' in line_clean) or ('- JT' in line_clean)):
+                            
+                            # Clean up the task
+                            task = line_clean.replace('* ', '').replace('- ', '').replace('• ', '').strip()
+                            
+                            if task and len(task) > 10:
+                                save_task(client_name, task)
+                                tasks_added += 1
+                    
+                    # Also look for numbered action items
+                    import re
+                    action_patterns = [
+                        r'^\d+\.\s*(.+)',          # Captures: "1. JT confirmed your TFSA..."
+                        r'^\*\s*(.+)',             # Captures: "* Any task"
+                        r'^-\s*(.+)',              # Captures: "- Any task"
+                    ]
+                    
+                    for pattern in action_patterns:
+                        matches = re.findall(pattern, email_text, re.MULTILINE | re.IGNORECASE)
+                        for match in matches:
+                            task_text = match.strip()
+                            if len(task_text) > 10 and ('JT' in task_text or 'James' in task_text):
+                                save_task(client_name, task_text)
+                                tasks_added += 1
+                    
+                    if tasks_added > 0:
+                        st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
+                    else:
+                        st.warning("⚠️ No tasks found")
 
             with col3:
                 # Download email as text file
