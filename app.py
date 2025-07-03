@@ -1400,44 +1400,52 @@ def main():
                 if st.button("📋 Extract Tasks", type="secondary"):
                     client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                     
-                    # Extract tasks from email - MUCH SIMPLER APPROACH
+                    # Extract tasks from email - GET ACTUAL NEXT STEPS
                     email_text = st.session_state.current_email
                     tasks_added = 0
                     
-                    # Look for Next Steps section
+                    # Find the Next Steps section
                     lines = email_text.split('\n')
                     in_next_steps = False
                     
                     for line in lines:
                         line_clean = line.strip()
                         
-                        # Check if we hit the Next Steps section
-                        if 'next steps' in line_clean.lower():
+                        # Check if we hit Next Steps section
+                        if 'next steps:' in line_clean.lower():
                             in_next_steps = True
+                            st.write(f"🎯 FOUND Next Steps section!")
                             continue
                         
-                        # Stop at signature
-                        if line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely')):
+                        # Stop at signature or next major section
+                        if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have', 'looking forward')) and in_next_steps):
+                            st.write(f"📝 Stopped at: {line_clean[:30]}...")
                             break
                         
-                        # If we're in Next Steps and find numbered items
+                        # If we're in Next Steps section, look for bullet points or numbers
                         if in_next_steps and line_clean:
-                            # Look for numbered items: 1. 2. 3. 4. etc.
-                            if line_clean.startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')):
-                                # Get the full task after the number
-                                task = line_clean[2:].strip()  # Remove "1." part
+                            # Look for bullet points (○, •, -, *) or numbers (1., 2., etc.)
+                            if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and 
+                                len(line_clean) > 3):  # Make sure it's not just a bullet
+                                
+                                # Clean up the task text
+                                task = line_clean
+                                # Remove bullet points and numbers
+                                for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
+                                    if task.startswith(prefix):
+                                        task = task[len(prefix):].strip()
+                                        break
+                                
                                 if task and len(task) > 5:
-                                    # Save with proper client name
-                                    full_task = f"{client_name}: {task}"
                                     save_task(client_name, task)
                                     tasks_added += 1
-                                    st.write(f"✅ FOUND: {full_task}")
+                                    st.write(f"✅ EXTRACTED: {task}")
                     
                     if tasks_added > 0:
                         st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
                     else:
-                        st.warning("⚠️ No numbered tasks found in Next Steps section")
-
+                        st.warning("⚠️ No tasks found under Next Steps section")
+                        st.write("DEBUG: Searched for 'next steps:' section with bullet points or numbers")
             with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
