@@ -1438,7 +1438,7 @@ def main():
                 if st.button("📋 Copy Email"):
                     st.info("Email content ready to copy (select and copy from the box above)")
 
-            with tab2:
+        with tab2:
             st.markdown("""
                 <div style="text-align: center; margin-bottom: 2rem;">
                     <h2 style="color: #00d4ff;">📄 Meeting Transcript</h2>
@@ -1472,6 +1472,7 @@ def main():
                 file_name=f"transcript_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain"
             )
+            
 
                     # Create a styled transcript container instead of text_area
                     st.markdown(f"""
