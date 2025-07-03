@@ -1106,16 +1106,23 @@ def main():
             """, unsafe_allow_html=True)
             
             # Show pending tasks
-            for task in pending_tasks[-5:]:  # Show last 5
-                col1, col2 = st.columns([4, 1])
-                with col1:
+            for task in pending_tasks[-10:]:  # Show last 10
+                col_a, col_b = st.columns([5, 1])
+                with col_a:
                     st.markdown(f"""
-                        <div style="background: rgba(255, 71, 87, 0.1); padding: 0.75rem; border-radius: 8px; margin: 0.25rem 0; border-left: 3px solid #ff4757;">
-                            <strong style="color: #00d4ff;">{task['client_name']}</strong><br>
-                            <span style="color: #ffffff; font-size: 0.9rem;">{task['task']}</span>
+                        <div style="background: rgba(255, 71, 87, 0.1); padding: 1rem; border-radius: 10px; margin: 0.5rem 0; border-left: 4px solid #ff4757;">
+                            <div style="color: #00d4ff; font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem;">
+                                👤 CLIENT: {task['client_name']}
+                            </div>
+                            <div style="color: #ffffff; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word;">
+                                📋 TASK: {task['task']}
+                            </div>
+                            <div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem;">
+                                📅 Added: {task['date_added'][:10]}
+                            </div>
                         </div>
                     """, unsafe_allow_html=True)
-                with col2:
+                with col_b:
                     if st.button("✅", key=f"complete_{task['id']}"):
                         mark_task_complete(task['id'])
                         st.rerun()
@@ -1393,48 +1400,43 @@ def main():
                 if st.button("📋 Extract Tasks", type="secondary"):
                     client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                     
-                    # Extract tasks from email
+                    # Extract tasks from email - MUCH SIMPLER APPROACH
                     email_text = st.session_state.current_email
                     tasks_added = 0
                     
-                    # Look for common action patterns anywhere in the email
+                    # Look for Next Steps section
                     lines = email_text.split('\n')
-                    for i, line in enumerate(lines):
+                    in_next_steps = False
+                    
+                    for line in lines:
                         line_clean = line.strip()
                         
-                        # Look for JT/James action items anywhere
-                        if (('JT to' in line_clean) or ('James to' in line_clean) or 
-                            ('JT will' in line_clean) or ('James will' in line_clean) or
-                            line_clean.startswith('JT ') or line_clean.startswith('James ') or
-                            ('* JT' in line_clean) or ('- JT' in line_clean)):
-                            
-                            # Clean up the task
-                            task = line_clean.replace('* ', '').replace('- ', '').replace('• ', '').strip()
-                            
-                            if task and len(task) > 10:
-                                save_task(client_name, task)
-                                tasks_added += 1
-                    
-                    # Also look for numbered action items
-                    import re
-                    action_patterns = [
-                        r'^\d+\.\s*(.+)',          # Captures: "1. JT confirmed your TFSA..."
-                        r'^\*\s*(.+)',             # Captures: "* Any task"
-                        r'^-\s*(.+)',              # Captures: "- Any task"
-                    ]
-                    
-                    for pattern in action_patterns:
-                        matches = re.findall(pattern, email_text, re.MULTILINE | re.IGNORECASE)
-                        for match in matches:
-                            task_text = match.strip()
-                            if len(task_text) > 10 and ('JT' in task_text or 'James' in task_text):
-                                save_task(client_name, task_text)
-                                tasks_added += 1
+                        # Check if we hit the Next Steps section
+                        if 'next steps' in line_clean.lower():
+                            in_next_steps = True
+                            continue
+                        
+                        # Stop at signature
+                        if line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely')):
+                            break
+                        
+                        # If we're in Next Steps and find numbered items
+                        if in_next_steps and line_clean:
+                            # Look for numbered items: 1. 2. 3. 4. etc.
+                            if line_clean.startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')):
+                                # Get the full task after the number
+                                task = line_clean[2:].strip()  # Remove "1." part
+                                if task and len(task) > 5:
+                                    # Save with proper client name
+                                    full_task = f"{client_name}: {task}"
+                                    save_task(client_name, task)
+                                    tasks_added += 1
+                                    st.write(f"✅ FOUND: {full_task}")
                     
                     if tasks_added > 0:
                         st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
                     else:
-                        st.warning("⚠️ No tasks found")
+                        st.warning("⚠️ No numbered tasks found in Next Steps section")
 
             with col3:
                 # Download email as text file
