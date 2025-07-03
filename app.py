@@ -1433,11 +1433,6 @@ def main():
                     mime="text/plain"
                 )
 
-            with col3:
-                # Copy to clipboard button (JavaScript required)
-                if st.button("📋 Copy Email"):
-                    st.info("Email content ready to copy (select and copy from the box above)")
-
         with tab2:
             st.markdown("""
                 <div style="text-align: center; margin-bottom: 2rem;">
@@ -1464,53 +1459,6 @@ def main():
 {st.session_state.current_transcript}
                 </div>
             """, unsafe_allow_html=True)
-
-            # Download transcript
-            st.download_button(
-                "💾 Download Transcript",
-                st.session_state.current_transcript,
-                file_name=f"transcript_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                mime="text/plain"
-            )
-            
-
-                    # Create a styled transcript container instead of text_area
-                    st.markdown(f"""
-                        <div style="
-                            background: rgba(0, 0, 0, 0.8);
-                            color: #ffffff;
-                            padding: 1.5rem;
-                            border-radius: 15px;
-                            border: 2px solid #333;
-                            font-family: 'Courier New', monospace;
-                            line-height: 1.6;
-                            max-height: 400px;
-                            overflow-y: auto;
-                            white-space: pre-wrap;
-                            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
-                        ">
-                {st.session_state.current_transcript}
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                # Create a styled transcript container instead of text_area
-                st.markdown(f"""
-                    <div style="
-                        background: rgba(0, 0, 0, 0.8);
-                        color: #ffffff;
-                        padding: 1.5rem;
-                        border-radius: 15px;
-                        border: 2px solid #333;
-                        font-family: 'Courier New', monospace;
-                        line-height: 1.6;
-                        max-height: 400px;
-                        overflow-y: auto;
-                        white-space: pre-wrap;
-                        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
-                    ">
-            {st.session_state.current_transcript}
-                    </div>
-                """, unsafe_allow_html=True)
 
             # Download transcript
             st.download_button(
