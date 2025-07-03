@@ -1461,7 +1461,7 @@ def main():
                     white-space: pre-wrap;
                     box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
                 ">
-        {st.session_state.current_transcript}
+{st.session_state.current_transcript}
                 </div>
             """, unsafe_allow_html=True)
 
