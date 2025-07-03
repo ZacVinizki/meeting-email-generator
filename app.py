@@ -1401,49 +1401,47 @@ def main():
                     # Extract tasks from email
 email_text = st.session_state.current_email
 tasks_added = 0
+st.write("DEBUG - Looking for tasks in email...")  # Shows debug message
 
-# First, let's see what we're working with
-st.write("DEBUG - Looking for tasks in email...")
-
-# Look for common action patterns anywhere in the email
-lines = email_text.split('\n')
+lines = email_text.split('\n')  # Split email into individual lines
 for i, line in enumerate(lines):
-    line_clean = line.strip()
+    line_clean = line.strip()  # Remove extra spaces
     
-    # Look for JT/James action items anywhere
+    # Look for lines containing these phrases:
     if (('JT to' in line_clean) or ('James to' in line_clean) or 
         ('JT will' in line_clean) or ('James will' in line_clean) or
         line_clean.startswith('JT ') or line_clean.startswith('James ') or
         ('* JT' in line_clean) or ('- JT' in line_clean)):
         
-        # Clean up the task
+        # Clean up bullet points/dashes
         task = line_clean.replace('* ', '').replace('- ', '').replace('• ', '').strip()
         
-        if task and len(task) > 10:  # Make sure it's substantial
-            save_task(client_name, task)
+        if task and len(task) > 10:  # Only save if task is substantial
+            save_task(client_name, task)  # Save to tasks file
             tasks_added += 1
-            st.write(f"FOUND TASK: {task}")
+            st.write(f"FOUND TASK: {task}")  # Debug output
 
 # Also look for numbered action items
 import re
 action_patterns = [
-    r'^\d+\.\s*(JT|James).*',  # 1. JT to do something
-    r'^\*\s*(JT|James).*',     # * JT to do something  
-    r'^-\s*(JT|James).*',      # - JT to do something
+    r'^\d+\.\s*(.+)',          # Captures: "1. JT confirmed your TFSA..."
+    r'^\*\s*(.+)',             # Captures: "* Any task"
+    r'^-\s*(.+)',              # Captures: "- Any task"
 ]
 
 for pattern in action_patterns:
     matches = re.findall(pattern, email_text, re.MULTILINE | re.IGNORECASE)
     for match in matches:
-        if len(match) > 10:
-            save_task(client_name, match.strip())
+        task_text = match.strip()
+        if len(task_text) > 10 and ('JT' in task_text or 'James' in task_text):
+            save_task(client_name, task_text)
             tasks_added += 1
-            st.write(f"PATTERN FOUND: {match}")
-                    
-                    if tasks_added > 0:
-                        st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
-                    else:
-                        st.warning("⚠️ No tasks found")
+            st.write(f"PATTERN FOUND: {task_text}")
+
+if tasks_added > 0:
+    st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
+else:
+    st.warning("⚠️ No tasks found")
 
             with col3:
                 # Download email as text file
