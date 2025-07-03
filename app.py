@@ -659,13 +659,9 @@ st.markdown("""
 # Initialize directories
 AUDIO_DIR = Path("audio_files")
 EMAILS_DIR = Path("emails")
-TASKS_DIR = Path("tasks")
 AUDIO_DIR.mkdir(exist_ok=True)
 EMAILS_DIR.mkdir(exist_ok=True)
-TASKS_DIR.mkdir(exist_ok=True)
 
-# Tasks file path
-TASKS_FILE = TASKS_DIR / "james_tasks.json"
 
 # Configure OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -962,52 +958,6 @@ James
             json.dump(record, f, indent=2)
 
         return filepath
-def save_task(client_name, task_text):
-    """Save task to persistent file"""
-    # Load existing tasks
-    if TASKS_FILE.exists():
-        with open(TASKS_FILE, 'r') as f:
-            tasks = json.load(f)
-    else:
-        tasks = []
-    
-    # Add new task
-    new_task = {
-        "id": str(uuid.uuid4()),
-        "client_name": client_name,
-        "task": task_text,
-        "date_added": datetime.datetime.now().isoformat(),
-        "completed": False
-    }
-    
-    tasks.append(new_task)
-    
-    # Save back to file
-    with open(TASKS_FILE, 'w') as f:
-        json.dump(tasks, f, indent=2)
-    
-    return len(tasks)
-
-def get_all_tasks():
-    """Get all tasks from file"""
-    if TASKS_FILE.exists():
-        with open(TASKS_FILE, 'r') as f:
-            return json.load(f)
-    return []
-
-def mark_task_complete(task_id):
-    """Mark task as completed"""
-    if TASKS_FILE.exists():
-        with open(TASKS_FILE, 'r') as f:
-            tasks = json.load(f)
-        
-        for task in tasks:
-            if task['id'] == task_id:
-                task['completed'] = True
-                break
-        
-        with open(TASKS_FILE, 'w') as f:
-            json.dump(tasks, f, indent=2)
 
 def main():
     if not check_password():
@@ -1086,48 +1036,6 @@ def main():
 
         st.markdown("---")
 
-        # Task Manager Section
-        st.markdown("""
-            <h3 style="color: #00d4ff; margin-bottom: 1rem; text-align: center;">📋 Task Manager</h3>
-        """, unsafe_allow_html=True)
-
-        if st.button("📋 View Tasks File", use_container_width=True):
-            st.session_state.show_tasks = not st.session_state.get('show_tasks', False)
-
-        # Show tasks if button clicked
-        if st.session_state.get('show_tasks', False):
-            all_tasks = get_all_tasks()
-            pending_tasks = [t for t in all_tasks if not t['completed']]
-            
-            st.markdown(f"""
-                <div style="text-align: center; margin: 1rem 0; padding: 1rem; background: rgba(0, 212, 255, 0.1); border-radius: 10px;">
-                    <span style="color: #ff4757; font-weight: 600;">{len(pending_tasks)} Pending Tasks</span>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            # Show pending tasks
-            for task in pending_tasks[-10:]:  # Show last 10
-                col_a, col_b = st.columns([5, 1])
-                with col_a:
-                    st.markdown(f"""
-                        <div style="background: rgba(255, 71, 87, 0.1); padding: 1rem; border-radius: 10px; margin: 0.5rem 0; border-left: 4px solid #ff4757;">
-                            <div style="color: #00d4ff; font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem;">
-                                👤 CLIENT: {task['client_name']}
-                            </div>
-                            <div style="color: #ffffff; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word;">
-                                📋 TASK: {task['task']}
-                            </div>
-                            <div style="color: #888; font-size: 0.8rem; margin-top: 0.5rem;">
-                                📅 Added: {task['date_added'][:10]}
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                with col_b:
-                    if st.button("✅", key=f"complete_{task['id']}"):
-                        mark_task_complete(task['id'])
-                        st.rerun()
-
-        st.markdown("---")
 
 
         # Recent emails - COLLAPSIBLE CLEAN DESIGN
@@ -1396,13 +1304,13 @@ def main():
                             st.info("🗑️ Audio file cleaned up")
 
             with col2:
-                # Extract and save tasks
-                if st.button("📋 Extract Tasks", type="secondary"):
+                # Extract and auto-download tasks
+                if st.button("📋 Extract & Download Tasks", type="secondary"):
                     client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                     
-                    # Extract tasks from email - GET ACTUAL NEXT STEPS
+                    # Extract tasks from email
                     email_text = st.session_state.current_email
-                    tasks_added = 0
+                    extracted_tasks = []
                     
                     # Find the Next Steps section
                     lines = email_text.split('\n')
@@ -1414,38 +1322,53 @@ def main():
                         # Check if we hit Next Steps section
                         if 'next steps:' in line_clean.lower():
                             in_next_steps = True
-                            st.write(f"🎯 FOUND Next Steps section!")
                             continue
                         
-                        # Stop at signature or next major section
+                        # Stop at signature
                         if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have', 'looking forward')) and in_next_steps):
-                            st.write(f"📝 Stopped at: {line_clean[:30]}...")
                             break
                         
-                        # If we're in Next Steps section, look for bullet points or numbers
+                        # Extract bullet points/numbered items
                         if in_next_steps and line_clean:
-                            # Look for bullet points (○, •, -, *) or numbers (1., 2., etc.)
                             if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and 
-                                len(line_clean) > 3):  # Make sure it's not just a bullet
+                                len(line_clean) > 3):
                                 
-                                # Clean up the task text
+                                # Clean up the task
                                 task = line_clean
-                                # Remove bullet points and numbers
                                 for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
                                     if task.startswith(prefix):
                                         task = task[len(prefix):].strip()
                                         break
                                 
                                 if task and len(task) > 5:
-                                    save_task(client_name, task)
-                                    tasks_added += 1
-                                    st.write(f"✅ EXTRACTED: {task}")
+                                    extracted_tasks.append(task)
                     
-                    if tasks_added > 0:
-                        st.success(f"✅ Added {tasks_added} tasks for {client_name}!")
+                    # Create Excel-ready CSV content
+                    if extracted_tasks:
+                        csv_content = "Client Name,Task Description,Date Extracted,Status,Project,Priority\n"
+                        current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                        
+                        for task in extracted_tasks:
+                            csv_content += f'"{client_name}","{task}","{current_date}","Pending","Meeting Follow-up","Medium"\n'
+                        
+                        # Auto-download the file
+                        st.download_button(
+                            "📥 Download Tasks Excel File",
+                            csv_content,
+                            file_name=f"Tasks_{client_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                            mime="text/csv",
+                            key="auto_download_tasks"
+                        )
+                        
+                        st.success(f"✅ Found {len(extracted_tasks)} tasks for {client_name}!")
+                        st.info("📊 CSV file ready - opens in Excel with columns for Client, Task, Date, Status, Project, Priority")
+                        
+                        # Show preview
+                        with st.expander("📋 Preview Tasks"):
+                            for i, task in enumerate(extracted_tasks, 1):
+                                st.write(f"{i}. **{client_name}:** {task}")
                     else:
                         st.warning("⚠️ No tasks found under Next Steps section")
-                        st.write("DEBUG: Searched for 'next steps:' section with bullet points or numbers")
             with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
