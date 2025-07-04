@@ -82,7 +82,8 @@ class ExcelOnlineManager:
         self.excel_file_id = os.getenv("EXCEL_FILE_ID")
         
         self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-        self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite"]
+        # FIXED: Corrected the scope name
+        self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite.All"]
         self.graph_url = "https://graph.microsoft.com/v1.0"
         
         # Get the current Streamlit app URL for redirect
@@ -229,7 +230,6 @@ class ExcelOnlineManager:
         except Exception as e:
             st.error(f"Error adding tasks to Excel: {str(e)}")
             return False
-
 def test_excel_connection():
     """Test Excel connection with user authentication"""
     excel_manager = ExcelOnlineManager()
