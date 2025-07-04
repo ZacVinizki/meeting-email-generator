@@ -1471,7 +1471,7 @@ st.markdown(f"""
 </a>
 """, unsafe_allow_html=True)
                 
-            with col3:
+        with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
                 st.download_button(
