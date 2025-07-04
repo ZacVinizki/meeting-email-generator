@@ -1471,15 +1471,15 @@ st.markdown(f"""
 </a>
 """, unsafe_allow_html=True)
                 
-        with col3:
-                # Download email as text file
-                email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
-                st.download_button(
-                    "💾 Download Email",
-                    email_text,
-                    file_name=f"email_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                    mime="text/plain"
-                )
+    with col3:
+            # Download email as text file
+            email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
+            st.download_button(
+                "💾 Download Email",
+                email_text,
+                file_name=f"email_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain"
+            )
 
         with tab2:
             st.markdown("""
