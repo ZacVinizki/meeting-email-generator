@@ -1481,9 +1481,11 @@ def main():
                     else:
                         st.warning("⚠️ No tasks found")
                 
-                # Direct Excel access button
+                # Direct Excel access button - FIXED URL FOR YOUR ONEDRIVE
                 excel_file_id = os.getenv('EXCEL_FILE_ID')
-                excel_url = f"https://office.live.com/start/Excel.aspx?omkt=en-US&ui=en-US&rs=US&WOPISrc=https%3A//graph.microsoft.com/v1.0/me/drive/items/{excel_file_id}"
+                # Construct the correct SharePoint URL based on your actual URL
+                excel_url = f"https://ewingmorris-my.sharepoint.com/:x:/r/personal/zacvinizki_ewingmorris_com/_layouts/15/Doc.aspx?sourcedoc=%7B{excel_file_id}%7D&file=Book%201.xlsx&action=edit"
+                
                 st.markdown(f"""
                 <a href="{excel_url}" target="_blank">
                     <button style="
