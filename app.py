@@ -82,85 +82,47 @@ class ExcelOnlineManager:
         self.excel_file_id = os.getenv("EXCEL_FILE_ID")
         
         self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-        self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite.All"]
+        self.scope = ["https://graph.microsoft.com/.default"]  # Application scope
         self.graph_url = "https://graph.microsoft.com/v1.0"
         
-    def get_simple_auth_url(self):
-        """Get simple authorization URL"""
-        app = msal.ConfidentialClientApplication(
-            client_id=self.client_id,
-            client_credential=self.client_secret,
-            authority=self.authority
-        )
-        
-        # Use a simple redirect that will work
-        redirect_uri = "https://login.microsoftonline.com/common/oauth2/nativeclient"
-        
-        auth_url = app.get_authorization_request_url(
-            scopes=self.scope,
-            redirect_uri=redirect_uri
-        )
-        return auth_url
-    
-    def simple_authenticate(self):
-        """Super simple authentication"""
-        if 'excel_access_token' in st.session_state:
-            return True
+    def get_app_token(self):
+        """Get application token - NO USER INTERACTION NEEDED"""
+        try:
+            app = msal.ConfidentialClientApplication(
+                client_id=self.client_id,
+                client_credential=self.client_secret,
+                authority=self.authority
+            )
             
-        auth_url = self.get_simple_auth_url()
-        
-        st.info("🔐 **Quick Setup:** Click link → Sign in → Copy the code that appears")
-        st.markdown(f"[🔗 **Click Here to Authorize Excel Access**]({auth_url})")
-        
-        auth_code = st.text_input("📋 Paste the authorization code here:", key="simple_auth_code")
-        
-        if auth_code:
-            try:
-                app = msal.ConfidentialClientApplication(
-                    client_id=self.client_id,
-                    client_credential=self.client_secret,
-                    authority=self.authority
-                )
-                
-                result = app.acquire_token_by_authorization_code(
-                    auth_code,
-                    scopes=self.scope,
-                    redirect_uri="https://login.microsoftonline.com/common/oauth2/nativeclient"
-                )
-                
-                if "access_token" in result:
-                    st.session_state.excel_access_token = result["access_token"]
-                    st.success("✅ Excel access granted!")
-                    st.rerun()
-                    return True
-                else:
-                    st.error(f"Auth failed: {result.get('error_description', 'Unknown error')}")
-                    return False
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-                return False
-        
-        return False
+            # Get token using client credentials (autonomous)
+            result = app.acquire_token_for_client(scopes=self.scope)
+            
+            if "access_token" in result:
+                return result["access_token"]
+            else:
+                st.error(f"Token failed: {result.get('error_description', 'Unknown error')}")
+                return None
+        except Exception as e:
+            st.error(f"Auth error: {str(e)}")
+            return None
     
     def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
-        """Add tasks to Excel automatically"""
+        """Add tasks autonomously - NO USER INTERACTION"""
         
-        if 'excel_access_token' not in st.session_state:
+        # Get app token automatically
+        token = self.get_app_token()
+        if not token:
             return False
         
         headers = {
-            'Authorization': f'Bearer {st.session_state.excel_access_token}',
+            'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
         }
         
         try:
             # Get next empty row
-            url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/usedRange"
+            url = f"{self.graph_url}/drives/b!{self.excel_file_id}/root/workbook/worksheets/Sheet1/usedRange"
             response = requests.get(url, headers=headers)
-            
-            if response.status_code == 401:
-                del st.session_state.excel_access_token
-                return False
             
             next_row = 2
             if response.status_code == 200:
@@ -168,7 +130,7 @@ class ExcelOnlineManager:
                 if 'rowCount' in used_range:
                     next_row = used_range['rowCount'] + 1
             
-            # Prepare task data
+            # Prepare tasks
             current_date = datetime.datetime.now().strftime('%Y-%m-%d')
             values = []
             for task in tasks:
@@ -185,7 +147,7 @@ class ExcelOnlineManager:
             
             body = {"values": values}
             
-            url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/range(address='{range_address}')"
+            url = f"{self.graph_url}/drives/b!{self.excel_file_id}/root/workbook/worksheets/Sheet1/range(address='{range_address}')"
             response = requests.patch(url, headers=headers, json=body)
             
             return response.status_code == 200
@@ -1446,79 +1408,68 @@ def main():
                             st.info("🗑️ Audio file cleaned up")
 
             with col2:
-                if st.button("🚀 Add Tasks to Excel", type="secondary"):
-                    client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
-                    
-                    # Extract tasks
-                    email_text = st.session_state.current_email
-                    extracted_tasks = []
-                    lines = email_text.split('\n')
-                    in_next_steps = False
-                    
-                    for line in lines:
-                        line_clean = line.strip()
-                        if 'next steps:' in line_clean.lower() or 'action items:' in line_clean.lower():
-                            in_next_steps = True
-                            continue
-                        if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have')) and in_next_steps):
+    if st.button("🚀 Add Tasks to Excel", type="secondary"):
+        client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
+        
+        # Extract tasks (same logic as before)
+        email_text = st.session_state.current_email
+        extracted_tasks = []
+        lines = email_text.split('\n')
+        in_next_steps = False
+        
+        for line in lines:
+            line_clean = line.strip()
+            if 'next steps:' in line_clean.lower() or 'action items:' in line_clean.lower():
+                in_next_steps = True
+                continue
+            if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have')) and in_next_steps):
+                break
+            if in_next_steps and line_clean:
+                if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and len(line_clean) > 3):
+                    task = line_clean
+                    for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
+                        if task.startswith(prefix):
+                            task = task[len(prefix):].strip()
                             break
-                        if in_next_steps and line_clean:
-                            if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and len(line_clean) > 3):
-                                task = line_clean
-                                for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
-                                    if task.startswith(prefix):
-                                        task = task[len(prefix):].strip()
-                                        break
-                                if task and len(task) > 5:
-                                    extracted_tasks.append(task)
-                    
-                    if extracted_tasks:
-                        excel_manager = ExcelOnlineManager()
+                    if task and len(task) > 5:
+                        extracted_tasks.append(task)
+        
+        if extracted_tasks:
+            excel_manager = ExcelOnlineManager()
+            if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
+                st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
+                with st.expander("📋 Tasks Added"):
+                    for i, task in enumerate(extracted_tasks, 1):
+                        st.write(f"{i}. **{client_name}:** {task}")
+            else:
+                st.error("❌ Failed to add tasks")
+        else:
+            st.warning("⚠️ No tasks found")
                         
-                        # Check auth
-                        if 'excel_access_token' not in st.session_state:
-                            if excel_manager.simple_authenticate():
-                                # Try adding tasks after auth
-                                if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
-                                    st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
-                                else:
-                                    st.error("❌ Failed to add tasks")
-                        else:
-                            # Already authenticated - add tasks
-                            if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
-                                st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
-                                with st.expander("📋 Tasks Added"):
-                                    for i, task in enumerate(extracted_tasks, 1):
-                                        st.write(f"{i}. **{client_name}:** {task}")
-                            else:
-                                st.error("❌ Failed - please try again")
-                                if 'excel_access_token' in st.session_state:
-                                    del st.session_state.excel_access_token
-                    else:
-                        st.warning("⚠️ No tasks found")
-                        
-                # Direct Excel access button
-                excel_url = f"https://office.com/launch/excel?d={os.getenv('EXCEL_FILE_ID')}"
-                st.markdown(f"""
-                <a href="{excel_url}" target="_blank">
-                    <button style="
-                        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-                        color: #000000;
-                        font-weight: 700;
-                        border: none;
-                        border-radius: 15px;
-                        padding: 1rem 2rem;
-                        font-size: 1rem;
-                        width: 100%;
-                        cursor: pointer;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                        margin-top: 0.5rem;
-                    ">
-                        📊 Open Excel File
-                    </button>
-                </a>
-                """, unsafe_allow_html=True)
+               # Direct Excel access button - FIXED URL
+excel_file_id = os.getenv('EXCEL_FILE_ID')
+excel_url = f"https://office.live.com/start/Excel.aspx?omkt=en-US&ui=en-US&rs=US&WOPISrc=https%3A//graph.microsoft.com/v1.0/me/drive/items/{excel_file_id}"
+
+st.markdown(f"""
+<a href="{excel_url}" target="_blank">
+    <button style="
+        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+        color: #000000;
+        font-weight: 700;
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 2rem;
+        font-size: 1rem;
+        width: 100%;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 0.5rem;
+    ">
+        📊 Open Task Master Excel
+    </button>
+</a>
+""", unsafe_allow_html=True)
                 
             with col3:
                 # Download email as text file
