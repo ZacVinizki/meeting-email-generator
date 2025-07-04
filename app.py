@@ -112,6 +112,7 @@ class ExcelOnlineManager:
         # Get app token automatically
         token = self.get_app_token()
         if not token:
+            st.error("❌ Failed to get access token")
             return False
         
         headers = {
@@ -120,15 +121,21 @@ class ExcelOnlineManager:
         }
         
         try:
-            # Get next empty row
-            url = f"{self.graph_url}/drives/b!{self.excel_file_id}/root/workbook/worksheets/Sheet1/usedRange"
+            # FIXED: Use correct URL format for file ID
+            url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/usedRange"
             response = requests.get(url, headers=headers)
+            
+            st.info(f"📊 Getting Excel info: {response.status_code}")
             
             next_row = 2
             if response.status_code == 200:
                 used_range = response.json()
                 if 'rowCount' in used_range:
                     next_row = used_range['rowCount'] + 1
+                st.info(f"📍 Next row will be: {next_row}")
+            elif response.status_code != 404:  # 404 is ok for empty sheet
+                st.error(f"❌ Excel access failed: {response.status_code} - {response.text}")
+                return False
             
             # Prepare tasks
             current_date = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -147,10 +154,17 @@ class ExcelOnlineManager:
             
             body = {"values": values}
             
-            url = f"{self.graph_url}/drives/b!{self.excel_file_id}/root/workbook/worksheets/Sheet1/range(address='{range_address}')"
+            # FIXED: Use correct URL format
+            url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/range(address='{range_address}')"
             response = requests.patch(url, headers=headers, json=body)
             
-            return response.status_code == 200
+            st.info(f"📝 Adding tasks: {response.status_code}")
+            
+            if response.status_code == 200:
+                return True
+            else:
+                st.error(f"❌ Failed to add tasks: {response.status_code} - {response.text}")
+                return False
                 
         except Exception as e:
             st.error(f"Excel error: {str(e)}")
