@@ -1408,70 +1408,69 @@ def main():
                             st.info("🗑️ Audio file cleaned up")
 
 with col2:
-    if st.button("🚀 Add Tasks to Excel", type="secondary"):
-        client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
-        
-        # Extract tasks (same logic as before)
-        email_text = st.session_state.current_email
-        extracted_tasks = []
-        lines = email_text.split('\n')
-        in_next_steps = False
-        
-        for line in lines:
-            line_clean = line.strip()
-            if 'next steps:' in line_clean.lower() or 'action items:' in line_clean.lower():
-                in_next_steps = True
-                continue
-            if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have')) and in_next_steps):
-                break
-            if in_next_steps and line_clean:
-                if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and len(line_clean) > 3):
-                    task = line_clean
-                    for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
-                        if task.startswith(prefix):
-                            task = task[len(prefix):].strip()
-                            break
-                    if task and len(task) > 5:
-                        extracted_tasks.append(task)
-        
-        if extracted_tasks:
-            excel_manager = ExcelOnlineManager()
-            if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
-                st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
-                with st.expander("📋 Tasks Added"):
-                    for i, task in enumerate(extracted_tasks, 1):
-                        st.write(f"{i}. **{client_name}:** {task}")
-            else:
-                st.error("❌ Failed to add tasks")
-        else:
-            st.warning("⚠️ No tasks found")
-                        
-               # Direct Excel access button - FIXED URL
-excel_file_id = os.getenv('EXCEL_FILE_ID')
-excel_url = f"https://office.live.com/start/Excel.aspx?omkt=en-US&ui=en-US&rs=US&WOPISrc=https%3A//graph.microsoft.com/v1.0/me/drive/items/{excel_file_id}"
-
-st.markdown(f"""
-<a href="{excel_url}" target="_blank">
-    <button style="
-        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-        color: #000000;
-        font-weight: 700;
-        border: none;
-        border-radius: 15px;
-        padding: 1rem 2rem;
-        font-size: 1rem;
-        width: 100%;
-        cursor: pointer;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 0.5rem;
-    ">
-        📊 Open Task Master Excel
-    </button>
-</a>
-""", unsafe_allow_html=True)
+            if st.button("🚀 Add Tasks to Excel", type="secondary"):
+                client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                 
-    with col3:
+                # Extract tasks (same logic as before)
+                email_text = st.session_state.current_email
+                extracted_tasks = []
+                lines = email_text.split('\n')
+                in_next_steps = False
+                
+                for line in lines:
+                    line_clean = line.strip()
+                    if 'next steps:' in line_clean.lower() or 'action items:' in line_clean.lower():
+                        in_next_steps = True
+                        continue
+                    if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have')) and in_next_steps):
+                        break
+                    if in_next_steps and line_clean:
+                        if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and len(line_clean) > 3):
+                            task = line_clean
+                            for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
+                                if task.startswith(prefix):
+                                    task = task[len(prefix):].strip()
+                                    break
+                            if task and len(task) > 5:
+                                extracted_tasks.append(task)
+                
+                if extracted_tasks:
+                    excel_manager = ExcelOnlineManager()
+                    if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
+                        st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
+                        with st.expander("📋 Tasks Added"):
+                            for i, task in enumerate(extracted_tasks, 1):
+                                st.write(f"{i}. **{client_name}:** {task}")
+                    else:
+                        st.error("❌ Failed to add tasks")
+                else:
+                    st.warning("⚠️ No tasks found")
+                            
+            # Direct Excel access button - FIXED URL (MOVE THIS INSIDE col2)
+            excel_file_id = os.getenv('EXCEL_FILE_ID')
+            excel_url = f"https://office.live.com/start/Excel.aspx?omkt=en-US&ui=en-US&rs=US&WOPISrc=https%3A//graph.microsoft.com/v1.0/me/drive/items/{excel_file_id}"
+            st.markdown(f"""
+            <a href="{excel_url}" target="_blank">
+                <button style="
+                    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+                    color: #000000;
+                    font-weight: 700;
+                    border: none;
+                    border-radius: 15px;
+                    padding: 1rem 2rem;
+                    font-size: 1rem;
+                    width: 100%;
+                    cursor: pointer;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-top: 0.5rem;
+                ">
+                    📊 Open Task Master Excel
+                </button>
+            </a>
+            """, unsafe_allow_html=True)
+                    
+        with col3:
             # Download email as text file
             email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
             st.download_button(
