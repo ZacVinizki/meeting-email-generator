@@ -169,9 +169,8 @@ class ExcelOnlineManager:
     def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
         """Add tasks to Excel with user authentication"""
         
-        # Check if we have a valid token
+        # Must have a valid token at this point
         if 'excel_access_token' not in st.session_state:
-            st.warning("⚠️ Please authenticate first to access Excel")
             return False
         
         headers = {
@@ -185,7 +184,7 @@ class ExcelOnlineManager:
             response = requests.get(url, headers=headers)
             
             if response.status_code == 401:
-                st.warning("🔄 Authentication expired. Please sign in again.")
+                # Token expired
                 del st.session_state.excel_access_token
                 return False
             
@@ -1514,23 +1513,47 @@ def main():
                     if extracted_tasks:
                         try:
                             excel_manager = ExcelOnlineManager()
-                            success = excel_manager.add_tasks_to_excel(client_name, extracted_tasks)
                             
-                            if success:
-                                st.success(f"✅ Added {len(extracted_tasks)} tasks to Master Excel!")
-                                st.info("📊 Tasks added to shared Excel Online")
-                                
-                                with st.expander("📋 Tasks Added"):
-                                    for i, task in enumerate(extracted_tasks, 1):
-                                        st.write(f"{i}. **{client_name}:** {task}")
+                            # Check if authenticated, if not, show auth UI
+                            if 'excel_access_token' not in st.session_state:
+                                st.info("🔐 Excel authentication required")
+                                if excel_manager.authenticate_user():
+                                    # Authentication successful, now try to add tasks
+                                    success = excel_manager.add_tasks_to_excel(client_name, extracted_tasks)
+                                    
+                                    if success:
+                                        st.success(f"✅ Added {len(extracted_tasks)} tasks to Master Excel!")
+                                        st.info("📊 Tasks added to shared Excel Online")
+                                        
+                                        with st.expander("📋 Tasks Added"):
+                                            for i, task in enumerate(extracted_tasks, 1):
+                                                st.write(f"{i}. **{client_name}:** {task}")
+                                    else:
+                                        st.error("❌ Failed to add tasks to Excel Online")
+                                else:
+                                    st.warning("⚠️ Authentication required to add tasks to Excel")
                             else:
-                                st.error("❌ Failed to add tasks to Excel Online")
+                                # Already authenticated, try to add tasks
+                                success = excel_manager.add_tasks_to_excel(client_name, extracted_tasks)
                                 
+                                if success:
+                                    st.success(f"✅ Added {len(extracted_tasks)} tasks to Master Excel!")
+                                    st.info("📊 Tasks added to shared Excel Online")
+                                    
+                                    with st.expander("📋 Tasks Added"):
+                                        for i, task in enumerate(extracted_tasks, 1):
+                                            st.write(f"{i}. **{client_name}:** {task}")
+                                else:
+                                    st.error("❌ Failed to add tasks to Excel Online")
+                                    # Clear token in case it's expired
+                                    if 'excel_access_token' in st.session_state:
+                                        del st.session_state.excel_access_token
+                                        st.info("🔄 Please try again - authentication may have expired")
+                                    
                         except Exception as e:
                             st.error(f"❌ Excel integration error: {str(e)}")
                     else:
                         st.warning("⚠️ No tasks found under Next Steps/Action Items section")
-                        
             with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
