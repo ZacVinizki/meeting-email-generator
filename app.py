@@ -107,7 +107,7 @@ class ExcelOnlineManager:
             return None
     
     def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
-        """Add tasks autonomously - DEBUG VERSION"""
+        """Add tasks autonomously - CORRECT PERSONAL ONEDRIVE PATH"""
         
         # Get app token automatically
         token = self.get_app_token()
@@ -121,69 +121,74 @@ class ExcelOnlineManager:
         }
         
         try:
-            st.info("🔍 **DEBUGGING: Let's see what we can access...**")
+            # CORRECT PATH: Based on your URL structure
+            file_id = self.excel_file_id
             
-            # TEST 1: Check what sites we can access
-            sites_url = f"{self.graph_url}/sites"
-            sites_response = requests.get(sites_url, headers=headers)
-            st.info(f"📍 Sites access: {sites_response.status_code}")
+            # Method 1: Try accessing via your specific user path
+            user_path = "zacvinizki_ewingmorris_com"
+            base_url = f"{self.graph_url}/users/{user_path}/drive/items/{file_id}"
             
-            if sites_response.status_code == 200:
-                sites_data = sites_response.json()
-                st.info(f"📁 Found {len(sites_data.get('value', []))} sites")
+            # Test access to the workbook
+            wb_url = f"{base_url}/workbook/worksheets/Sheet1/usedRange"
+            response = requests.get(wb_url, headers=headers)
+            st.info(f"📊 Workbook access: {response.status_code}")
+            
+            if response.status_code == 200:
+                used_range = response.json()
+                next_row = 2
+                if 'rowCount' in used_range:
+                    next_row = used_range['rowCount'] + 1
+                st.info(f"📍 Next row: {next_row}")
                 
-                # TEST 2: Try to access the root site
-                root_site_url = f"{self.graph_url}/sites/root"
-                root_response = requests.get(root_site_url, headers=headers)
-                st.info(f"🏠 Root site access: {root_response.status_code}")
+            elif response.status_code == 404:
+                # Try alternative format for personal OneDrive
+                alt_url = f"{self.graph_url}/users/zacvinizki@ewingmorris.com/drive/items/{file_id}/workbook/worksheets/Sheet1/usedRange"
+                alt_response = requests.get(alt_url, headers=headers)
+                st.info(f"📊 Alternative path: {alt_response.status_code}")
                 
-                if root_response.status_code == 200:
-                    # TEST 3: Try to access root drive
-                    drive_url = f"{self.graph_url}/sites/root/drive"
-                    drive_response = requests.get(drive_url, headers=headers)
-                    st.info(f"💾 Root drive access: {drive_response.status_code}")
-                    
-                    if drive_response.status_code == 200:
-                        # TEST 4: Search for Excel files
-                        search_url = f"{self.graph_url}/sites/root/drive/search(q='.xlsx')"
-                        search_response = requests.get(search_url, headers=headers)
-                        st.info(f"🔎 Excel search: {search_response.status_code}")
-                        
-                        if search_response.status_code == 200:
-                            search_results = search_response.json()
-                            excel_files = search_results.get('value', [])
-                            st.info(f"📊 Found {len(excel_files)} Excel files")
-                            
-                            # Show the files we found
-                            for i, file in enumerate(excel_files[:5]):  # Show first 5
-                                st.write(f"**File {i+1}:** {file.get('name', 'Unknown')}")
-                                st.write(f"**ID:** {file.get('id', 'No ID')}")
-                                st.write(f"**Path:** {file.get('webUrl', 'No URL')}")
-                                st.write("---")
-                            
-                            # Try using the first Excel file we find
-                            if excel_files:
-                                first_file = excel_files[0]
-                                file_id = first_file['id']
-                                st.info(f"🎯 **Trying to use file:** {first_file['name']}")
-                                
-                                # Try to access this file's workbook
-                                wb_url = f"{self.graph_url}/sites/root/drive/items/{file_id}/workbook/worksheets"
-                                wb_response = requests.get(wb_url, headers=headers)
-                                st.info(f"📋 Workbook access: {wb_response.status_code}")
-                                
-                                if wb_response.status_code == 200:
-                                    st.success("✅ **FOUND WORKING PATH!**")
-                                    st.info(f"**Use this File ID in your secrets:** `{file_id}`")
-                                    return True
-                                else:
-                                    st.error(f"❌ Workbook failed: {wb_response.text}")
+                if alt_response.status_code == 200:
+                    base_url = f"{self.graph_url}/users/zacvinizki@ewingmorris.com/drive/items/{file_id}"
+                    used_range = alt_response.json()
+                    next_row = 2
+                    if 'rowCount' in used_range:
+                        next_row = used_range['rowCount'] + 1
+                else:
+                    st.error(f"❌ Both paths failed: {response.status_code}, {alt_response.status_code}")
+                    st.error(f"Original error: {response.text}")
+                    return False
+            else:
+                st.error(f"❌ Access failed: {response.status_code} - {response.text}")
+                return False
             
-            st.error("❌ Could not find a working path to Excel files")
-            return False
+            # Prepare tasks
+            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            values = []
+            for task in tasks:
+                row_data = [
+                    client_name, task, current_date, "Pending", 
+                    "Meeting Follow-up", "Medium", "James", ""
+                ]
+                values.append(row_data)
+            
+            # Add to Excel
+            start_row = next_row
+            end_row = next_row + len(tasks) - 1
+            range_address = f"A{start_row}:H{end_row}"
+            body = {"values": values}
+            
+            add_url = f"{base_url}/workbook/worksheets/Sheet1/range(address='{range_address}')"
+            add_response = requests.patch(add_url, headers=headers, json=body)
+            
+            st.info(f"📝 Adding tasks: {add_response.status_code}")
+            
+            if add_response.status_code == 200:
+                return True
+            else:
+                st.error(f"❌ Failed to add: {add_response.status_code} - {add_response.text}")
+                return False
                 
         except Exception as e:
-            st.error(f"Debug error: {str(e)}")
+            st.error(f"Error: {str(e)}")
             return False
             
 def test_excel_connection():
