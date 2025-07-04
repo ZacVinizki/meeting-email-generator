@@ -1407,7 +1407,7 @@ def main():
                             os.remove(st.session_state.current_audio_path)
                             st.info("🗑️ Audio file cleaned up")
 
-            with col2:
+with col2:
     if st.button("🚀 Add Tasks to Excel", type="secondary"):
         client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
         
