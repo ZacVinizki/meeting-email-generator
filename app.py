@@ -7,7 +7,7 @@ into professional follow-up emails.
 
 Setup Instructions:
 1. Install dependencies: pip install -r requirements.txt
-2. Create a .env file with your credentials (see .env)
+2. Configure Streamlit secrets
 3. Run the app: streamlit run app.py
 4. Upload audio files and generate professional follow-up emails
 
@@ -25,16 +25,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import openai
-from dotenv import load_dotenv
 import uuid
 import time
-# Add these imports after your existing imports
 import msal
 import requests
 import pandas as pd
-# Load environment variables
-load_dotenv()
-print("Loaded OpenAI key:", os.getenv("OPENAI_API_KEY"))
 
 # PASSWORD PROTECTION
 def check_password():
@@ -78,6 +73,7 @@ def check_password():
             st.error("😞 Incorrect passcode. Please try again.")
     
     return False
+
 class ExcelOnlineManager:
     def __init__(self):
         self.client_id = os.getenv("MICROSOFT_CLIENT_ID")
@@ -88,6 +84,23 @@ class ExcelOnlineManager:
         self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
         self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite"]
         self.graph_url = "https://graph.microsoft.com/v1.0"
+        
+        # Get the current Streamlit app URL for redirect
+        self.redirect_uri = self._get_redirect_uri()
+        
+    def _get_redirect_uri(self):
+        """Get the redirect URI for the current Streamlit app"""
+        # For Streamlit Cloud, we'll use a generic redirect that we can handle
+        try:
+            # Try to get the current URL
+            if hasattr(st, 'get_option') and st.get_option('server.baseUrlPath'):
+                base_url = f"https://{st.get_option('server.baseUrlPath')}"
+            else:
+                # Fallback for Streamlit Cloud
+                base_url = "https://your-app-name.streamlit.app"
+            return f"{base_url}/"
+        except:
+            return "https://your-app-name.streamlit.app/"
         
     def get_auth_url(self):
         """Get authorization URL for user sign-in"""
@@ -100,12 +113,15 @@ class ExcelOnlineManager:
         # Generate auth URL
         auth_url = app.get_authorization_request_url(
             scopes=self.scope,
-            redirect_uri="http://localhost:8501"
+            redirect_uri=self.redirect_uri
         )
         return auth_url
     
     def authenticate_user(self):
         """Handle user authentication through browser"""
+        if 'excel_access_token' in st.session_state:
+            return True
+            
         auth_url = self.get_auth_url()
         
         st.markdown(f"""
@@ -120,27 +136,31 @@ class ExcelOnlineManager:
         
         if auth_code_url and "code=" in auth_code_url:
             # Extract authorization code from URL
-            auth_code = auth_code_url.split("code=")[1].split("&")[0]
-            
-            # Exchange code for token
-            app = msal.ConfidentialClientApplication(
-                client_id=self.client_id,
-                client_credential=self.client_secret,
-                authority=self.authority
-            )
-            
-            result = app.acquire_token_by_authorization_code(
-                auth_code,
-                scopes=self.scope,
-                redirect_uri="http://localhost:8501"
-            )
-            
-            if "access_token" in result:
-                st.session_state.excel_access_token = result["access_token"]
-                st.success("✅ Successfully authenticated!")
-                return True
-            else:
-                st.error(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
+            try:
+                auth_code = auth_code_url.split("code=")[1].split("&")[0]
+                
+                # Exchange code for token
+                app = msal.ConfidentialClientApplication(
+                    client_id=self.client_id,
+                    client_credential=self.client_secret,
+                    authority=self.authority
+                )
+                
+                result = app.acquire_token_by_authorization_code(
+                    auth_code,
+                    scopes=self.scope,
+                    redirect_uri=self.redirect_uri
+                )
+                
+                if "access_token" in result:
+                    st.session_state.excel_access_token = result["access_token"]
+                    st.success("✅ Successfully authenticated!")
+                    return True
+                else:
+                    st.error(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
+                    return False
+            except Exception as e:
+                st.error(f"Error processing authentication: {str(e)}")
                 return False
         
         return False
@@ -151,8 +171,6 @@ class ExcelOnlineManager:
         # Check if we have a valid token
         if 'excel_access_token' not in st.session_state:
             st.warning("⚠️ Please authenticate first to access Excel")
-            if self.authenticate_user():
-                return self.add_tasks_to_excel(client_name, tasks)  # Retry after auth
             return False
         
         headers = {
@@ -803,12 +821,12 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
 # Initialize directories
 AUDIO_DIR = Path("audio_files")
 EMAILS_DIR = Path("emails")
 AUDIO_DIR.mkdir(exist_ok=True)
 EMAILS_DIR.mkdir(exist_ok=True)
-
 
 # Configure OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -889,9 +907,9 @@ Key Takeaways:
 
 Investment Accounts:
 Performance has improved this year with accounts up ~20% after fees.  
-It’s been a great year for small/mid cap stocks, and we were waiting on this rebound to rebalance the account which is great (ie. we did not sell at the lows).
+It's been a great year for small/mid cap stocks, and we were waiting on this rebound to rebalance the account which is great (ie. we did not sell at the lows).
 We have been raising some cash ($20k) throughout the year to diversify the account into less volatile investments.
-We talked about ETFs and how we will be utilizing these more going forward to take advantage of “time arbitrage”.
+We talked about ETFs and how we will be utilizing these more going forward to take advantage of "time arbitrage".
 Planning & Personal:
 You are currently living in the UK and are pursuing an entrepreneurial venture in the film industry (very cool!).  
 You currently have ~5-6 months of living expenses covered assuming you do take on any part time work.
@@ -976,7 +994,7 @@ heres a final example :
 Hi Yvonne,
 
 
-It was great to see you in person yesterday!  Let’s make sure to do that at least once per year 😊.  Look forward to hearing about your 4 generation(!) trip to NFLD.
+It was great to see you in person yesterday!  Let's make sure to do that at least once per year 😊.  Look forward to hearing about your 4 generation(!) trip to NFLD.
 
  
 
@@ -1004,7 +1022,7 @@ YTD Review:
 We discussed performance, asset allocation and recent changes to the accounts and fund structures. Overall, your accounts are up ~1% in 2025, up just shy of 6% per year after fees since inception.  
 Major contributors were preferred shares, Canadian large cap equities and global equities (IQLT ETF).  
 Weakness was primarily driven by Apple (-20% YTD + USD weakness) and Transforce (-36% YTD).
-We remained within the Target Asset Allocation ranges of 0-30% Cash,  15-35% Fixed Income, and 30-70% Equity.  We’ve kept it simple without allocations to our alternatives sleeve.
+We remained within the Target Asset Allocation ranges of 0-30% Cash,  15-35% Fixed Income, and 30-70% Equity.  We've kept it simple without allocations to our alternatives sleeve.
 We discussed the changes to the Aventine Funds – Selling down the US Equity Fund (for more passive and fixed income exposure) & an eventual merger of the Aventine Canadian Equity Fund.
 We currently have orders in to sell all but ~$1,000 of the ACE Fund at the end of June.  
 We discussed the EM Flexible Fixed Income Fund and the other EM products.  JT made it clear we will not add additional Ewing Morris products.
@@ -1054,7 +1072,7 @@ James
             sender_password = os.getenv("SENDER_PASSWORD")
 
             if not all([sender_email, sender_password]):
-                st.error("Email credentials not configured. Please check your .env file.")
+                st.error("Email credentials not configured. Please check your secrets.")
                 return False
 
             # Create message
@@ -1140,7 +1158,7 @@ def main():
             st.markdown("""
                 <div style="background: linear-gradient(135deg, #ff4757, #ff3742); color: white; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
                     <strong>⚠️ OpenAI API Not Configured</strong><br>
-                    <small>Please configure your .env file</small>
+                    <small>Please configure your secrets</small>
                 </div>
             """, unsafe_allow_html=True)
         else:
@@ -1166,22 +1184,21 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
 
-            # Add the 2 additional status boxes
-            st.markdown("""
-                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
-                    <strong>✅ Audio Processing Active</strong><br>
-                    <small>MP3, WAV, M4A ready</small>
-                </div>
-            """, unsafe_allow_html=True)
+        # Additional status boxes
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                <strong>✅ Audio Processing Active</strong><br>
+                <small>MP3, WAV, M4A ready</small>
+            </div>
+        """, unsafe_allow_html=True)
 
-            st.markdown("""
-                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
-                    <strong>✅ Security Active</strong><br>
-                    <small>Authentication enabled</small>
-                </div>
-            """, unsafe_allow_html=True)
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                <strong>✅ Security Active</strong><br>
+                <small>Authentication enabled</small>
+            </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("---")
         st.markdown("---")
         
         # Excel Integration Status
@@ -1220,143 +1237,119 @@ def main():
         if excel_file_id:
             st.text(f"📄 File ID: {excel_file_id[:8]}...")
 
-
+        st.markdown("---")
 
         # Recent emails - COLLAPSIBLE CLEAN DESIGN
-    email_files = list(EMAILS_DIR.glob("*.json"))
-    email_count = len(email_files)
+        email_files = list(EMAILS_DIR.glob("*.json"))
+        email_count = len(email_files)
 
-    # Email count display
-    st.markdown(f"""
-           <div style="text-align: center; margin-bottom: 1rem;">
-               <span style="color: #666; font-size: 0.8rem;">📊 Total Emails Sent: </span>
-               <span style="color: #00d4ff; font-weight: 600; font-size: 1.1rem;">{email_count}</span>
-           </div>
-       """, unsafe_allow_html=True)
+        # Email count display
+        st.markdown(f"""
+               <div style="text-align: center; margin-bottom: 1rem;">
+                   <span style="color: #666; font-size: 0.8rem;">📊 Total Emails Sent: </span>
+                   <span style="color: #00d4ff; font-weight: 600; font-size: 1.1rem;">{email_count}</span>
+               </div>
+           """, unsafe_allow_html=True)
 
-    # Collapsible email history
-    if email_files:
-        with st.expander("📁 Email History", expanded=False):
-            email_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        # Collapsible email history
+        if email_files:
+            with st.expander("📁 Email History", expanded=False):
+                email_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
 
-            # Create container for the list
-            st.markdown("""
-                   <div style="margin: 1rem 0;">
-               """, unsafe_allow_html=True)
+                for email_file in email_files:
+                    try:
+                        with open(email_file, 'r') as f:
+                            record = json.load(f)
 
-            for i, email_file in enumerate(email_files):
-                try:
-                    with open(email_file, 'r') as f:
-                        record = json.load(f)
+                        # Extract email name (before @) and truncate if needed
+                        email_name = record['recipient_email'].split('@')[0]
+                        if len(email_name) > 15:
+                            email_name = email_name[:15] + "..."
 
-                    # Extract email name (before @) and truncate if needed
-                    email_name = record['recipient_email'].split('@')[0]
-                    if len(email_name) > 15:
-                        email_name = email_name[:15] + "..."
+                        # Format timestamp
+                        timestamp = record['timestamp'][:16].replace('T', ' ')
+                        date_part = timestamp.split(' ')[0]
+                        time_part = timestamp.split(' ')[1]
 
-                    # Format timestamp
-                    timestamp = record['timestamp'][:16].replace('T', ' ')
-                    date_part = timestamp.split(' ')[0]
-                    time_part = timestamp.split(' ')[1]
-
-                    # Create each email entry
-                    st.markdown(f"""
-                           <div style="
-                               background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%); 
-                               padding: 1rem; 
-                               border-radius: 12px; 
-                               margin: 0.5rem 0; 
-                               border-left: 4px solid #00d4ff;
-                               border: 1px solid #333;
-                               transition: all 0.3s ease;
-                               position: relative;
-                               overflow: hidden;
-                           " 
-                           onmouseover="
-                               this.style.background='linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(26, 26, 26, 0.9) 100%)'; 
-                               this.style.transform='translateY(-2px)';
-                               this.style.boxShadow='0 8px 25px rgba(0, 212, 255, 0.2)';
-                           "
-                           onmouseout="
-                               this.style.background='linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%)'; 
-                               this.style.transform='translateY(0px)';
-                               this.style.boxShadow='none';
-                           ">
-                               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                                   <div style="flex: 1;">
-                                       <div style="color: #00d4ff; font-weight: 700; font-size: 1rem; margin-bottom: 0.3rem; display: flex; align-items: center;">
-                                           <span style="margin-right: 0.5rem;">👤</span>
-                                           {email_name}
+                        # Create each email entry
+                        st.markdown(f"""
+                               <div style="
+                                   background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%); 
+                                   padding: 1rem; 
+                                   border-radius: 12px; 
+                                   margin: 0.5rem 0; 
+                                   border-left: 4px solid #00d4ff;
+                                   border: 1px solid #333;
+                                   transition: all 0.3s ease;
+                                   position: relative;
+                                   overflow: hidden;
+                               ">
+                                   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                       <div style="flex: 1;">
+                                           <div style="color: #00d4ff; font-weight: 700; font-size: 1rem; margin-bottom: 0.3rem; display: flex; align-items: center;">
+                                               <span style="margin-right: 0.5rem;">👤</span>
+                                               {email_name}
+                                           </div>
+                                           <div style="color: #cccccc; font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                               📧 {record['recipient_email']}
+                                           </div>
+                                           <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
+                                               <span style="color: #888; display: flex; align-items: center;">
+                                                   <span style="margin-right: 0.3rem;">📅</span>
+                                                   {date_part}
+                                               </span>
+                                               <span style="color: #888; display: flex; align-items: center;">
+                                                   <span style="margin-right: 0.3rem;">🕒</span>
+                                                   {time_part}
+                                               </span>
+                                           </div>
                                        </div>
-                                       <div style="color: #cccccc; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                           📧 {record['recipient_email']}
-                                       </div>
-                                       <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
-                                           <span style="color: #888; display: flex; align-items: center;">
-                                               <span style="margin-right: 0.3rem;">📅</span>
-                                               {date_part}
-                                           </span>
-                                           <span style="color: #888; display: flex; align-items: center;">
-                                               <span style="margin-right: 0.3rem;">🕒</span>
-                                               {time_part}
-                                           </span>
-                                       </div>
-                                   </div>
-                                   <div style="display: flex; flex-direction: column; align-items: center; margin-left: 1rem;">
-                                       <div style="color: #00ff88; font-size: 1.5rem; margin-bottom: 0.2rem;">
-                                           ✓
-                                       </div>
-                                       <div style="color: #00ff88; font-size: 0.7rem; font-weight: 600;">
-                                           SENT
+                                       <div style="display: flex; flex-direction: column; align-items: center; margin-left: 1rem;">
+                                           <div style="color: #00ff88; font-size: 1.5rem; margin-bottom: 0.2rem;">
+                                               ✓
+                                           </div>
+                                           <div style="color: #00ff88; font-size: 0.7rem; font-weight: 600;">
+                                               SENT
+                                           </div>
                                        </div>
                                    </div>
                                </div>
-                               <div style="
-                                   position: absolute; 
-                                   bottom: 0; 
-                                   left: 0; 
-                                   width: 100%; 
-                                   height: 2px; 
-                                   background: linear-gradient(90deg, #00d4ff 0%, transparent 100%);
-                               "></div>
-                           </div>
-                       """, unsafe_allow_html=True)
+                           """, unsafe_allow_html=True)
 
-                except (json.JSONDecodeError, KeyError):
-                    continue
+                    except (json.JSONDecodeError, KeyError):
+                        continue
 
-            st.markdown("</div>", unsafe_allow_html=True)
+                # Summary at bottom of expanded section
+                st.markdown(f"""
+                       <div style="
+                           text-align: center; 
+                           margin-top: 1.5rem; 
+                           padding: 1rem;
+                           background: rgba(0, 212, 255, 0.05);
+                           border-radius: 10px;
+                           border: 1px solid rgba(0, 212, 255, 0.2);
+                       ">
+                           <span style="color: #00d4ff; font-weight: 600;">📈 Total Communications: {email_count}</span>
+                       </div>
+                   """, unsafe_allow_html=True)
 
-            # Summary at bottom of expanded section
-            st.markdown(f"""
+        else:
+            st.markdown("""
                    <div style="
                        text-align: center; 
-                       margin-top: 1.5rem; 
-                       padding: 1rem;
-                       background: rgba(0, 212, 255, 0.05);
-                       border-radius: 10px;
-                       border: 1px solid rgba(0, 212, 255, 0.2);
+                       color: #666; 
+                       padding: 2rem 1rem;
+                       background: rgba(0, 0, 0, 0.3);
+                       border-radius: 15px;
+                       border: 1px dashed #333;
+                       margin-top: 1rem;
                    ">
-                       <span style="color: #00d4ff; font-weight: 600;">📈 Total Communications: {email_count}</span>
+                       <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                       <p style="color: #888; margin: 0; font-weight: 500;">No emails sent yet</p>
+                       <p style="color: #666; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Your email history will appear here</p>
                    </div>
                """, unsafe_allow_html=True)
-
-    else:
-        st.markdown("""
-               <div style="
-                   text-align: center; 
-                   color: #666; 
-                   padding: 2rem 1rem;
-                   background: rgba(0, 0, 0, 0.3);
-                   border-radius: 15px;
-                   border: 1px dashed #333;
-                   margin-top: 1rem;
-               ">
-                   <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-                   <p style="color: #888; margin: 0; font-weight: 500;">No emails sent yet</p>
-                   <p style="color: #666; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Your email history will appear here</p>
-               </div>
-           """, unsafe_allow_html=True)
+    
     # Main content area
     col1, col2 = st.columns([1, 1])
 
@@ -1429,6 +1422,7 @@ def main():
                         st.session_state.current_transcript = transcript
                         st.session_state.current_email = email_body
                         st.session_state.current_recipient = recipient_email
+                        st.session_state.current_recipient_name = recipient_name
                         st.session_state.current_audio_filename = audio_filename
                         st.session_state.current_audio_path = audio_path
 
@@ -1490,7 +1484,7 @@ def main():
             with col2:
                 # Extract and add to shared Excel Online
                 if st.button("📋 Add Tasks to Master Excel", type="secondary"):
-                    client_name = recipient_name if recipient_name else st.session_state.current_recipient.split('@')[0]
+                    client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                     
                     # Extract tasks from email
                     email_text = st.session_state.current_email
