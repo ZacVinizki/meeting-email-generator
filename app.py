@@ -1406,7 +1406,6 @@ def main():
                         if st.session_state.current_audio_path.exists():
                             os.remove(st.session_state.current_audio_path)
                             st.info("🗑️ Audio file cleaned up")
-
 with col2:
             if st.button("🚀 Add Tasks to Excel", type="secondary"):
                 client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
@@ -1445,8 +1444,8 @@ with col2:
                         st.error("❌ Failed to add tasks")
                 else:
                     st.warning("⚠️ No tasks found")
-                            
-            # Direct Excel access button - FIXED URL (MOVE THIS INSIDE col2)
+                        
+            # Direct Excel access button
             excel_file_id = os.getenv('EXCEL_FILE_ID')
             excel_url = f"https://office.live.com/start/Excel.aspx?omkt=en-US&ui=en-US&rs=US&WOPISrc=https%3A//graph.microsoft.com/v1.0/me/drive/items/{excel_file_id}"
             st.markdown(f"""
@@ -1469,7 +1468,7 @@ with col2:
                 </button>
             </a>
             """, unsafe_allow_html=True)
-                    
+
         with col3:
             # Download email as text file
             email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
@@ -1479,6 +1478,7 @@ with col2:
                 file_name=f"email_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain"
             )
+
 
         with tab2:
             st.markdown("""
