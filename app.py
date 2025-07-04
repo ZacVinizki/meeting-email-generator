@@ -28,7 +28,10 @@ import openai
 from dotenv import load_dotenv
 import uuid
 import time
-
+# Add these imports after your existing imports
+import msal
+import requests
+import pandas as pd
 # Load environment variables
 load_dotenv()
 print("Loaded OpenAI key:", os.getenv("OPENAI_API_KEY"))
@@ -75,7 +78,117 @@ def check_password():
             st.error("😞 Incorrect passcode. Please try again.")
     
     return False
+class ExcelOnlineManager:
+    def __init__(self):
+        self.client_id = os.getenv("MICROSOFT_CLIENT_ID")
+        self.client_secret = os.getenv("MICROSOFT_CLIENT_SECRET")
+        self.tenant_id = os.getenv("MICROSOFT_TENANT_ID")
+        self.excel_file_id = os.getenv("EXCEL_FILE_ID")
+        
+        self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
+        self.scope = ["https://graph.microsoft.com/.default"]
+        self.graph_url = "https://graph.microsoft.com/v1.0"
+        self.access_token = None
+        
+    def get_access_token(self):
+        try:
+            app = msal.ConfidentialClientApplication(
+                client_id=self.client_id,
+                client_credential=self.client_secret,
+                authority=self.authority
+            )
+            
+            result = app.acquire_token_for_client(scopes=self.scope)
+            
+            if "access_token" in result:
+                self.access_token = result["access_token"]
+                return True
+            else:
+                st.error(f"Failed to get access token: {result.get('error_description', 'Unknown error')}")
+                return False
+        except Exception as e:
+            st.error(f"Error getting access token: {str(e)}")
+            return False
+    
+    def get_next_empty_row(self):
+        if not self.access_token:
+            if not self.get_access_token():
+                return 2
+        
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        try:
+            url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/usedRange"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                used_range = response.json()
+                if 'rowCount' in used_range:
+                    return used_range['rowCount'] + 1
+                else:
+                    return 2
+            else:
+                return 2
+        except Exception as e:
+            return 2
+    
+    def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
+        if not self.access_token:
+            if not self.get_access_token():
+                return False
+        
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        try:
+            next_row = self.get_next_empty_row()
+            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            
+            values = []
+            for task in tasks:
+                row_data = [
+                    client_name,           # Client Name
+                    task,                  # Task Description
+                    current_date,          # Date Added
+                    "Pending",             # Status
+                    "Meeting Follow-up",   # Project
+                    "Medium",              # Priority
+                    "James",               # Assigned To
+                    ""                     # Due Date
+                ]
+                values.append(row_data)
+            
+            start_row = next_row
+            end_row = next_row + len(tasks) - 1
+            range_address = f"A{start_row}:H{end_row}"
+            
+            body = {"values": values}
+            
+            url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/range(address='{range_address}')"
+            response = requests.patch(url, headers=headers, json=body)
+            
+            if response.status_code == 200:
+                return True
+            else:
+                st.error(f"Failed to add tasks to Excel: {response.status_code} - {response.text}")
+                return False
+        except Exception as e:
+            st.error(f"Error adding tasks to Excel: {str(e)}")
+            return False
 
+def test_excel_connection():
+    excel_manager = ExcelOnlineManager()
+    if excel_manager.get_access_token():
+        st.success("✅ Successfully connected to Excel Online!")
+        return True
+    else:
+        st.error("❌ Failed to connect to Microsoft Graph API")
+        return False
 # Configure page
 st.set_page_config(
     page_title="Meeting Follow-up Generator",
@@ -1035,6 +1148,43 @@ def main():
             """, unsafe_allow_html=True)
 
         st.markdown("---")
+        st.markdown("---")
+        
+        # Excel Integration Status
+        st.markdown("### 📊 Excel Integration")
+        
+        # Check Excel configuration
+        excel_configured = all([
+            os.getenv("MICROSOFT_CLIENT_ID"),
+            os.getenv("MICROSOFT_CLIENT_SECRET"), 
+            os.getenv("MICROSOFT_TENANT_ID"),
+            os.getenv("EXCEL_FILE_ID")
+        ])
+        
+        if excel_configured:
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: black; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>✅ Excel API Configured</strong><br>
+                    <small>Ready to sync tasks</small>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #ffa502, #ff8c00); color: white; padding: 1rem; border-radius: 10px; margin: 1rem 0; text-align: center;">
+                    <strong>⚠️ Excel API Not Configured</strong><br>
+                    <small>Task sync disabled</small>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        # Test connection button
+        if st.button("🔗 Test Excel Connection"):
+            with st.spinner("Testing connection..."):
+                test_excel_connection()
+        
+        # Show file ID if configured
+        excel_file_id = os.getenv("EXCEL_FILE_ID", "")
+        if excel_file_id:
+            st.text(f"📄 File ID: {excel_file_id[:8]}...")
 
 
 
@@ -1304,71 +1454,55 @@ def main():
                             st.info("🗑️ Audio file cleaned up")
 
             with col2:
-                # Extract and auto-download tasks
-                if st.button("📋 Extract & Download Tasks", type="secondary"):
-                    client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
+                # Extract and add to shared Excel Online
+                if st.button("📋 Add Tasks to Master Excel", type="secondary"):
+                    client_name = recipient_name if recipient_name else st.session_state.current_recipient.split('@')[0]
                     
                     # Extract tasks from email
                     email_text = st.session_state.current_email
                     extracted_tasks = []
                     
-                    # Find the Next Steps section
+                    # Find Next Steps and extract
                     lines = email_text.split('\n')
                     in_next_steps = False
                     
                     for line in lines:
                         line_clean = line.strip()
-                        
-                        # Check if we hit Next Steps section
-                        if 'next steps:' in line_clean.lower():
+                        if 'next steps:' in line_clean.lower() or 'action items:' in line_clean.lower():
                             in_next_steps = True
                             continue
-                        
-                        # Stop at signature
-                        if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have', 'looking forward')) and in_next_steps):
+                        if (line_clean.lower().startswith(('warm regards', 'all the best', 'sincerely', 'should you have')) and in_next_steps):
                             break
-                        
-                        # Extract bullet points/numbered items
                         if in_next_steps and line_clean:
-                            if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and 
-                                len(line_clean) > 3):
-                                
-                                # Clean up the task
+                            if (line_clean.startswith(('○', '•', '-', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')) and len(line_clean) > 3):
                                 task = line_clean
                                 for prefix in ['○ ', '• ', '- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ']:
                                     if task.startswith(prefix):
                                         task = task[len(prefix):].strip()
                                         break
-                                
                                 if task and len(task) > 5:
                                     extracted_tasks.append(task)
                     
-                    # Create Excel-ready CSV content
                     if extracted_tasks:
-                        csv_content = "Client Name,Task Description,Date Extracted,Status,Project,Priority\n"
-                        current_date = datetime.datetime.now().strftime('%Y-%m-%d')
-                        
-                        for task in extracted_tasks:
-                            csv_content += f'"{client_name}","{task}","{current_date}","Pending","Meeting Follow-up","Medium"\n'
-                        
-                        # Auto-download the file
-                        st.download_button(
-                            "📥 Download Tasks Excel File",
-                            csv_content,
-                            file_name=f"Tasks_{client_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                            mime="text/csv",
-                            key="auto_download_tasks"
-                        )
-                        
-                        st.success(f"✅ Found {len(extracted_tasks)} tasks for {client_name}!")
-                        st.info("📊 CSV file ready - opens in Excel with columns for Client, Task, Date, Status, Project, Priority")
-                        
-                        # Show preview
-                        with st.expander("📋 Preview Tasks"):
-                            for i, task in enumerate(extracted_tasks, 1):
-                                st.write(f"{i}. **{client_name}:** {task}")
+                        try:
+                            excel_manager = ExcelOnlineManager()
+                            success = excel_manager.add_tasks_to_excel(client_name, extracted_tasks)
+                            
+                            if success:
+                                st.success(f"✅ Added {len(extracted_tasks)} tasks to Master Excel!")
+                                st.info("📊 Tasks added to shared Excel Online")
+                                
+                                with st.expander("📋 Tasks Added"):
+                                    for i, task in enumerate(extracted_tasks, 1):
+                                        st.write(f"{i}. **{client_name}:** {task}")
+                            else:
+                                st.error("❌ Failed to add tasks to Excel Online")
+                                
+                        except Exception as e:
+                            st.error(f"❌ Excel integration error: {str(e)}")
                     else:
-                        st.warning("⚠️ No tasks found under Next Steps section")
+                        st.warning("⚠️ No tasks found under Next Steps/Action Items section")
+                        
             with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
