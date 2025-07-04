@@ -86,69 +86,98 @@ class ExcelOnlineManager:
         self.excel_file_id = os.getenv("EXCEL_FILE_ID")
         
         self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-        self.scope = ["https://graph.microsoft.com/.default"]
+        self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite.All"]
         self.graph_url = "https://graph.microsoft.com/v1.0"
-        self.access_token = None
         
-    def get_access_token(self):
-        try:
+    def get_auth_url(self):
+        """Get authorization URL for user sign-in"""
+        app = msal.ConfidentialClientApplication(
+            client_id=self.client_id,
+            client_credential=self.client_secret,
+            authority=self.authority
+        )
+        
+        # Generate auth URL
+        auth_url = app.get_authorization_request_url(
+            scopes=self.scope,
+            redirect_uri="http://localhost:8501"
+        )
+        return auth_url
+    
+    def authenticate_user(self):
+        """Handle user authentication through browser"""
+        auth_url = self.get_auth_url()
+        
+        st.markdown(f"""
+        **Step 1:** Click this link to sign in with your Ewing Morris account:
+        
+        [🔗 Sign in to Microsoft]({auth_url})
+        
+        **Step 2:** After signing in, you'll be redirected. Copy the full URL from your browser and paste it below:
+        """)
+        
+        auth_code_url = st.text_input("Paste the redirect URL here:", key="auth_url")
+        
+        if auth_code_url and "code=" in auth_code_url:
+            # Extract authorization code from URL
+            auth_code = auth_code_url.split("code=")[1].split("&")[0]
+            
+            # Exchange code for token
             app = msal.ConfidentialClientApplication(
                 client_id=self.client_id,
                 client_credential=self.client_secret,
                 authority=self.authority
             )
             
-            result = app.acquire_token_for_client(scopes=self.scope)
+            result = app.acquire_token_by_authorization_code(
+                auth_code,
+                scopes=self.scope,
+                redirect_uri="http://localhost:8501"
+            )
             
             if "access_token" in result:
-                self.access_token = result["access_token"]
+                st.session_state.excel_access_token = result["access_token"]
+                st.success("✅ Successfully authenticated!")
                 return True
             else:
-                st.error(f"Failed to get access token: {result.get('error_description', 'Unknown error')}")
+                st.error(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
                 return False
-        except Exception as e:
-            st.error(f"Error getting access token: {str(e)}")
-            return False
+        
+        return False
     
-    def get_next_empty_row(self):
-        if not self.access_token:
-            if not self.get_access_token():
-                return 2
+    def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
+        """Add tasks to Excel with user authentication"""
+        
+        # Check if we have a valid token
+        if 'excel_access_token' not in st.session_state:
+            st.warning("⚠️ Please authenticate first to access Excel")
+            if self.authenticate_user():
+                return self.add_tasks_to_excel(client_name, tasks)  # Retry after auth
+            return False
         
         headers = {
-            'Authorization': f'Bearer {self.access_token}',
+            'Authorization': f'Bearer {st.session_state.excel_access_token}',
             'Content-Type': 'application/json'
         }
         
         try:
+            # Get next empty row
             url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/usedRange"
             response = requests.get(url, headers=headers)
             
+            if response.status_code == 401:
+                st.warning("🔄 Authentication expired. Please sign in again.")
+                del st.session_state.excel_access_token
+                return False
+            
+            next_row = 2  # Default
             if response.status_code == 200:
                 used_range = response.json()
                 if 'rowCount' in used_range:
-                    return used_range['rowCount'] + 1
-                else:
-                    return 2
-            else:
-                return 2
-        except Exception as e:
-            return 2
-    
-    def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
-        if not self.access_token:
-            if not self.get_access_token():
-                return False
-        
-        headers = {
-            'Authorization': f'Bearer {self.access_token}',
-            'Content-Type': 'application/json'
-        }
-        
-        try:
-            next_row = self.get_next_empty_row()
-            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                    next_row = used_range['rowCount'] + 1
             
+            # Prepare task data
+            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
             values = []
             for task in tasks:
                 row_data = [
@@ -163,6 +192,7 @@ class ExcelOnlineManager:
                 ]
                 values.append(row_data)
             
+            # Add to Excel
             start_row = next_row
             end_row = next_row + len(tasks) - 1
             range_address = f"A{start_row}:H{end_row}"
@@ -175,20 +205,24 @@ class ExcelOnlineManager:
             if response.status_code == 200:
                 return True
             else:
-                st.error(f"Failed to add tasks to Excel: {response.status_code} - {response.text}")
+                st.error(f"Failed to add tasks: {response.status_code} - {response.text}")
                 return False
+                
         except Exception as e:
             st.error(f"Error adding tasks to Excel: {str(e)}")
             return False
 
 def test_excel_connection():
+    """Test Excel connection with user authentication"""
     excel_manager = ExcelOnlineManager()
-    if excel_manager.get_access_token():
-        st.success("✅ Successfully connected to Excel Online!")
+    
+    if 'excel_access_token' in st.session_state:
+        st.success("✅ Already authenticated! Excel connection ready.")
         return True
     else:
-        st.error("❌ Failed to connect to Microsoft Graph API")
-        return False
+        st.info("🔐 Authentication required for Excel access")
+        return excel_manager.authenticate_user()
+        
 # Configure page
 st.set_page_config(
     page_title="Meeting Follow-up Generator",
