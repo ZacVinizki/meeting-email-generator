@@ -121,41 +121,46 @@ class ExcelOnlineManager:
         }
         
         try:
-            # STEP 1: Find the file using search (works with app permissions)
-            search_url = f"{self.graph_url}/sites/root/drive/search(q='Ewing Morris Task Master')"
-            search_response = requests.get(search_url, headers=headers)
+            # TRY MULTIPLE URL FORMATS until one works
+            file_id = self.excel_file_id
             
-            if search_response.status_code != 200:
-                st.error(f"❌ File search failed: {search_response.status_code} - {search_response.text}")
-                return False
+            # Format 1: Try OneDrive for Business format
+            url1 = f"{self.graph_url}/drives/b!{file_id}/root/workbook/worksheets/Sheet1/usedRange"
+            response1 = requests.get(url1, headers=headers)
+            st.info(f"📊 Try format 1: {response1.status_code}")
             
-            search_results = search_response.json()
-            if not search_results.get('value'):
-                st.error("❌ Excel file not found. Make sure 'Ewing Morris Task Master' exists.")
-                return False
+            if response1.status_code == 200:
+                working_base = f"{self.graph_url}/drives/b!{file_id}/root"
+                used_range = response1.json()
+            else:
+                # Format 2: Try SharePoint format  
+                url2 = f"{self.graph_url}/sites/root/drive/items/{file_id}/workbook/worksheets/Sheet1/usedRange"
+                response2 = requests.get(url2, headers=headers)
+                st.info(f"📊 Try format 2: {response2.status_code}")
+                
+                if response2.status_code == 200:
+                    working_base = f"{self.graph_url}/sites/root/drive/items/{file_id}"
+                    used_range = response2.json()
+                else:
+                    # Format 3: Try direct item access
+                    url3 = f"{self.graph_url}/drives/items/{file_id}/workbook/worksheets/Sheet1/usedRange"
+                    response3 = requests.get(url3, headers=headers)
+                    st.info(f"📊 Try format 3: {response3.status_code}")
+                    
+                    if response3.status_code == 200:
+                        working_base = f"{self.graph_url}/drives/items/{file_id}"
+                        used_range = response3.json()
+                    else:
+                        st.error(f"❌ All formats failed. File ID might be wrong: {file_id}")
+                        return False
             
-            # Get the file's drive info
-            file_info = search_results['value'][0]
-            drive_id = file_info['parentReference']['driveId']
-            file_id = file_info['id']
-            
-            st.info(f"📁 Found file in drive: {drive_id[:8]}...")
-            
-            # STEP 2: Get current data using drive path
-            url = f"{self.graph_url}/drives/{drive_id}/items/{file_id}/workbook/worksheets/Sheet1/usedRange"
-            response = requests.get(url, headers=headers)
-            
+            # Calculate next row
             next_row = 2
-            if response.status_code == 200:
-                used_range = response.json()
-                if 'rowCount' in used_range:
-                    next_row = used_range['rowCount'] + 1
-                st.info(f"📍 Next row will be: {next_row}")
-            elif response.status_code != 404:  # 404 is ok for empty sheet
-                st.error(f"❌ Excel access failed: {response.status_code} - {response.text}")
-                return False
+            if 'rowCount' in used_range:
+                next_row = used_range['rowCount'] + 1
+            st.info(f"📍 Next row will be: {next_row}")
             
-            # STEP 3: Prepare tasks
+            # Prepare tasks
             current_date = datetime.datetime.now().strftime('%Y-%m-%d')
             values = []
             for task in tasks:
@@ -165,14 +170,14 @@ class ExcelOnlineManager:
                 ]
                 values.append(row_data)
             
-            # STEP 4: Add to Excel using drive path
+            # Add to Excel using working format
             start_row = next_row
             end_row = next_row + len(tasks) - 1
             range_address = f"A{start_row}:H{end_row}"
             
             body = {"values": values}
             
-            url = f"{self.graph_url}/drives/{drive_id}/items/{file_id}/workbook/worksheets/Sheet1/range(address='{range_address}')"
+            url = f"{working_base}/workbook/worksheets/Sheet1/range(address='{range_address}')"
             response = requests.patch(url, headers=headers, json=body)
             
             st.info(f"📝 Adding tasks: {response.status_code}")
