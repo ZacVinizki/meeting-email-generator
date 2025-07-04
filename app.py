@@ -86,7 +86,7 @@ class ExcelOnlineManager:
         self.excel_file_id = os.getenv("EXCEL_FILE_ID")
         
         self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-        self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite.All"]
+        self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite"]
         self.graph_url = "https://graph.microsoft.com/v1.0"
         
     def get_auth_url(self):
