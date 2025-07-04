@@ -82,65 +82,40 @@ class ExcelOnlineManager:
         self.excel_file_id = os.getenv("EXCEL_FILE_ID")
         
         self.authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-        # FIXED: Corrected the scope name
         self.scope = ["https://graph.microsoft.com/Files.ReadWrite", "https://graph.microsoft.com/Sites.ReadWrite.All"]
         self.graph_url = "https://graph.microsoft.com/v1.0"
         
-        # Get the current Streamlit app URL for redirect
-        self.redirect_uri = self._get_redirect_uri()
-        
-    def _get_redirect_uri(self):
-        """Get the redirect URI for the current Streamlit app"""
-        # For Streamlit Cloud, we'll use a generic redirect that we can handle
-        try:
-            # Try to get the current URL
-            if hasattr(st, 'get_option') and st.get_option('server.baseUrlPath'):
-                base_url = f"https://{st.get_option('server.baseUrlPath')}"
-            else:
-                # Fallback for Streamlit Cloud
-                base_url = "https://your-app-name.streamlit.app"
-            return f"{base_url}/"
-        except:
-            return "https://your-app-name.streamlit.app/"
-        
-    def get_auth_url(self):
-        """Get authorization URL for user sign-in"""
+    def get_simple_auth_url(self):
+        """Get simple authorization URL"""
         app = msal.ConfidentialClientApplication(
             client_id=self.client_id,
             client_credential=self.client_secret,
             authority=self.authority
         )
         
-        # Generate auth URL
+        # Use a simple redirect that will work
+        redirect_uri = "https://login.microsoftonline.com/common/oauth2/nativeclient"
+        
         auth_url = app.get_authorization_request_url(
             scopes=self.scope,
-            redirect_uri=self.redirect_uri
+            redirect_uri=redirect_uri
         )
         return auth_url
     
-    def authenticate_user(self):
-        """Handle user authentication through browser"""
+    def simple_authenticate(self):
+        """Super simple authentication"""
         if 'excel_access_token' in st.session_state:
             return True
             
-        auth_url = self.get_auth_url()
+        auth_url = self.get_simple_auth_url()
         
-        st.markdown(f"""
-        **Step 1:** Click this link to sign in with your Ewing Morris account:
+        st.info("🔐 **Quick Setup:** Click link → Sign in → Copy the code that appears")
+        st.markdown(f"[🔗 **Click Here to Authorize Excel Access**]({auth_url})")
         
-        [🔗 Sign in to Microsoft]({auth_url})
+        auth_code = st.text_input("📋 Paste the authorization code here:", key="simple_auth_code")
         
-        **Step 2:** After signing in, you'll be redirected. Copy the full URL from your browser and paste it below:
-        """)
-        
-        auth_code_url = st.text_input("Paste the redirect URL here:", key="auth_url")
-        
-        if auth_code_url and "code=" in auth_code_url:
-            # Extract authorization code from URL
+        if auth_code:
             try:
-                auth_code = auth_code_url.split("code=")[1].split("&")[0]
-                
-                # Exchange code for token
                 app = msal.ConfidentialClientApplication(
                     client_id=self.client_id,
                     client_credential=self.client_secret,
@@ -150,26 +125,26 @@ class ExcelOnlineManager:
                 result = app.acquire_token_by_authorization_code(
                     auth_code,
                     scopes=self.scope,
-                    redirect_uri=self.redirect_uri
+                    redirect_uri="https://login.microsoftonline.com/common/oauth2/nativeclient"
                 )
                 
                 if "access_token" in result:
                     st.session_state.excel_access_token = result["access_token"]
-                    st.success("✅ Successfully authenticated!")
+                    st.success("✅ Excel access granted!")
+                    st.rerun()
                     return True
                 else:
-                    st.error(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
+                    st.error(f"Auth failed: {result.get('error_description', 'Unknown error')}")
                     return False
             except Exception as e:
-                st.error(f"Error processing authentication: {str(e)}")
+                st.error(f"Error: {str(e)}")
                 return False
         
         return False
     
     def add_tasks_to_excel(self, client_name: str, tasks: list) -> bool:
-        """Add tasks to Excel with user authentication"""
+        """Add tasks to Excel automatically"""
         
-        # Must have a valid token at this point
         if 'excel_access_token' not in st.session_state:
             return False
         
@@ -184,11 +159,10 @@ class ExcelOnlineManager:
             response = requests.get(url, headers=headers)
             
             if response.status_code == 401:
-                # Token expired
                 del st.session_state.excel_access_token
                 return False
             
-            next_row = 2  # Default
+            next_row = 2
             if response.status_code == 200:
                 used_range = response.json()
                 if 'rowCount' in used_range:
@@ -199,14 +173,8 @@ class ExcelOnlineManager:
             values = []
             for task in tasks:
                 row_data = [
-                    client_name,           # Client Name
-                    task,                  # Task Description
-                    current_date,          # Date Added
-                    "Pending",             # Status
-                    "Meeting Follow-up",   # Project
-                    "Medium",              # Priority
-                    "James",               # Assigned To
-                    ""                     # Due Date
+                    client_name, task, current_date, "Pending", 
+                    "Meeting Follow-up", "Medium", "James", ""
                 ]
                 values.append(row_data)
             
@@ -220,15 +188,12 @@ class ExcelOnlineManager:
             url = f"{self.graph_url}/me/drive/items/{self.excel_file_id}/workbook/worksheets/Sheet1/range(address='{range_address}')"
             response = requests.patch(url, headers=headers, json=body)
             
-            if response.status_code == 200:
-                return True
-            else:
-                st.error(f"Failed to add tasks: {response.status_code} - {response.text}")
-                return False
+            return response.status_code == 200
                 
         except Exception as e:
-            st.error(f"Error adding tasks to Excel: {str(e)}")
+            st.error(f"Excel error: {str(e)}")
             return False
+            
 def test_excel_connection():
     """Test Excel connection with user authentication"""
     excel_manager = ExcelOnlineManager()
@@ -1481,15 +1446,12 @@ def main():
                             st.info("🗑️ Audio file cleaned up")
 
             with col2:
-                # Extract and add to shared Excel Online
-                if st.button("📋 Add Tasks to Master Excel", type="secondary"):
+                if st.button("🚀 Add Tasks to Excel", type="secondary"):
                     client_name = st.session_state.get('current_recipient_name', '') or st.session_state.current_recipient.split('@')[0]
                     
-                    # Extract tasks from email
+                    # Extract tasks
                     email_text = st.session_state.current_email
                     extracted_tasks = []
-                    
-                    # Find Next Steps and extract
                     lines = email_text.split('\n')
                     in_next_steps = False
                     
@@ -1511,49 +1473,53 @@ def main():
                                     extracted_tasks.append(task)
                     
                     if extracted_tasks:
-                        try:
-                            excel_manager = ExcelOnlineManager()
-                            
-                            # Check if authenticated, if not, show auth UI
-                            if 'excel_access_token' not in st.session_state:
-                                st.info("🔐 Excel authentication required")
-                                if excel_manager.authenticate_user():
-                                    # Authentication successful, now try to add tasks
-                                    success = excel_manager.add_tasks_to_excel(client_name, extracted_tasks)
-                                    
-                                    if success:
-                                        st.success(f"✅ Added {len(extracted_tasks)} tasks to Master Excel!")
-                                        st.info("📊 Tasks added to shared Excel Online")
-                                        
-                                        with st.expander("📋 Tasks Added"):
-                                            for i, task in enumerate(extracted_tasks, 1):
-                                                st.write(f"{i}. **{client_name}:** {task}")
-                                    else:
-                                        st.error("❌ Failed to add tasks to Excel Online")
+                        excel_manager = ExcelOnlineManager()
+                        
+                        # Check auth
+                        if 'excel_access_token' not in st.session_state:
+                            if excel_manager.simple_authenticate():
+                                # Try adding tasks after auth
+                                if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
+                                    st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
                                 else:
-                                    st.warning("⚠️ Authentication required to add tasks to Excel")
+                                    st.error("❌ Failed to add tasks")
+                        else:
+                            # Already authenticated - add tasks
+                            if excel_manager.add_tasks_to_excel(client_name, extracted_tasks):
+                                st.success(f"✅ Added {len(extracted_tasks)} tasks to Excel!")
+                                with st.expander("📋 Tasks Added"):
+                                    for i, task in enumerate(extracted_tasks, 1):
+                                        st.write(f"{i}. **{client_name}:** {task}")
                             else:
-                                # Already authenticated, try to add tasks
-                                success = excel_manager.add_tasks_to_excel(client_name, extracted_tasks)
-                                
-                                if success:
-                                    st.success(f"✅ Added {len(extracted_tasks)} tasks to Master Excel!")
-                                    st.info("📊 Tasks added to shared Excel Online")
-                                    
-                                    with st.expander("📋 Tasks Added"):
-                                        for i, task in enumerate(extracted_tasks, 1):
-                                            st.write(f"{i}. **{client_name}:** {task}")
-                                else:
-                                    st.error("❌ Failed to add tasks to Excel Online")
-                                    # Clear token in case it's expired
-                                    if 'excel_access_token' in st.session_state:
-                                        del st.session_state.excel_access_token
-                                        st.info("🔄 Please try again - authentication may have expired")
-                                    
-                        except Exception as e:
-                            st.error(f"❌ Excel integration error: {str(e)}")
+                                st.error("❌ Failed - please try again")
+                                if 'excel_access_token' in st.session_state:
+                                    del st.session_state.excel_access_token
                     else:
-                        st.warning("⚠️ No tasks found under Next Steps/Action Items section")
+                        st.warning("⚠️ No tasks found")
+                        
+                # Direct Excel access button
+                excel_url = f"https://office.com/launch/excel?d={os.getenv('EXCEL_FILE_ID')}"
+                st.markdown(f"""
+                <a href="{excel_url}" target="_blank">
+                    <button style="
+                        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+                        color: #000000;
+                        font-weight: 700;
+                        border: none;
+                        border-radius: 15px;
+                        padding: 1rem 2rem;
+                        font-size: 1rem;
+                        width: 100%;
+                        cursor: pointer;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-top: 0.5rem;
+                    ">
+                        📊 Open Excel File
+                    </button>
+                </a>
+                """, unsafe_allow_html=True)
+                
             with col3:
                 # Download email as text file
                 email_text = f"Subject: Follow-Up from Our Recent Meeting\n\n{st.session_state.current_email}"
